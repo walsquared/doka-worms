@@ -1,7 +1,8 @@
 body {
   margin: 0;
   display: flex;
-  place-items: stretch;
+  justify-content: center;
+  align-items: center;
   min-width: 320px;
   min-height: 100vh;
   background-color: black;
@@ -9,5 +10,4 @@ body {
 
 canvas {
   display: flex;
-  flex: 1;
 }
