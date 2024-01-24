@@ -1,6 +1,11 @@
 // https://www.volkshotel.nl/content/uploads/2023/09/DOKA_SITE_v2.mp4
 // In action: https://www.volkshotel.nl/en/doka
 
+type Point = {
+  x: number;
+  y: number;
+};
+
 let mouseX = 0;
 let mouseY = 0;
 
@@ -28,8 +33,59 @@ const DOT_SIZE = 25;
 const GRADIENT_STOPS = 1;
 const WORM_LENGTH = 600;
 
-const startingPointX = canvas.width / 2;
-const startingPointY = canvas.height / 2;
+const STARTING_POINT: Point = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+};
+
+/**
+ * A function to be passed to Array.sort().
+ * Points always score lower the higher their x value
+ * For points with the same x value, points score lower the lower their y value
+ */
+function orderPoints(pointA: Point, pointB: Point): number {
+  return pointA.x === pointB.x ? pointA.y - pointB.y : pointB.x - pointA.x;
+}
+
+function makeSquare(sizeInDots: number): Point[] {
+  if (sizeInDots === 0) return [];
+  if (sizeInDots === 1) return [STARTING_POINT];
+
+  const adjustedDotSize = DOT_SIZE * 0.9; // This removes a small between the squiggles
+
+  const points: Point[] = [];
+  const sizeLength = adjustedDotSize * (sizeInDots - 1); // -1 because the dots' origins are centered
+
+  for (let i = 0; i < sizeInDots; i++) {
+    // Top size
+    points.push({
+      x: STARTING_POINT.x - sizeLength / 2 + adjustedDotSize * i,
+      y: STARTING_POINT.y - sizeLength / 2,
+    });
+
+    // Right side
+    points.push({
+      x: STARTING_POINT.x + sizeLength / 2,
+      y: STARTING_POINT.y - sizeLength / 2 + adjustedDotSize * i,
+    });
+
+    // Bottom side
+    points.push({
+      x: STARTING_POINT.x + sizeLength / 2 - adjustedDotSize * i,
+      y: STARTING_POINT.y + sizeLength / 2,
+    });
+
+    // Left side
+    points.push({
+      x: STARTING_POINT.x - sizeLength / 2,
+      y: STARTING_POINT.y + sizeLength / 2 - adjustedDotSize * i,
+    });
+  }
+
+  return points.sort(orderPoints);
+}
+
+const square = makeSquare(13);
 
 const startOfAnimation = new Date();
 
@@ -140,12 +196,12 @@ function draw() {
   // context.fillStyle = gradient;
   // context.fill();
 
-  drawSquiggle(startingPointX, startingPointY);
+  // drawSquiggle(STARTING_POINT.x, STARTING_POINT.y);
 
   // // Squiggle width
   // context.beginPath();
-  // context.moveTo(startingPointX, startingPointY);
-  // context.lineTo(startingPointX + WORM_LENGTH, startingPointY);
+  // context.moveTo(STARTING_POINT.x, STARTING_POINT.y);
+  // context.lineTo(STARTING_POINT.x + WORM_LENGTH, STARTING_POINT.y);
   // context.lineWidth = 1;
   // context.strokeStyle = 'white';
   // context.stroke();
@@ -153,24 +209,18 @@ function draw() {
   // // Circle
   // for (let i = 0; i < 12; i++) {
   //   drawSquiggle(
-  //     startingPointX + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-  //     startingPointY + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
+  //     STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+  //     STARTING_POINT.y + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
   //   );
   // }
   // for (let i = 0; i < 13; i++) {
   //   drawSquiggle(
-  //     startingPointX + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-  //     startingPointY - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
+  //     STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+  //     STARTING_POINT.y - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
   //   );
   // }
 
-  // // Top and left of a square
-  // for (let i = 0; i < 10; i++) {
-  //   drawSquiggle(startingPointX + (10 - i) * DOT_SIZE * 0.9, startingPointY);
-  // }
-  // for (let i = 0; i < 10; i++) {
-  //   drawSquiggle(startingPointX, startingPointY + i * DOT_SIZE * 0.9);
-  // }
+  square.forEach((point) => drawSquiggle(point.x, point.y));
 
   window.requestAnimationFrame(draw);
 
