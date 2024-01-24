@@ -54,7 +54,7 @@ function makeGradient(
   startY: number,
   animationPosition: number
 ): CanvasGradient {
-  const gradientAnimationOffset = Math.sin(animationPosition / 40) * 100;
+  const gradientAnimationOffset = Math.sin(animationPosition / 40 + 10) * 100;
   const gradientXOffset = 3 * (startX / canvas.width - 0.5) * 500;
   const gradientYOffset = 3 * (startY / canvas.height - 0.5) * 100;
 
@@ -133,14 +133,14 @@ function drawSquiggle(startX: number, startY: number) {
 function draw() {
   context.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Test gradient on full screen
-  context.rect(0, 0, canvas.width, canvas.height);
-  const gradient = makeGradient(mouseX, mouseY, 0);
-  // const gradient = makeGradient(canvas.width / 2, 0, 0);
-  context.fillStyle = gradient;
-  context.fill();
+  // // Test gradient on full screen
+  // context.rect(0, 0, canvas.width, canvas.height);
+  // const gradient = makeGradient(mouseX, mouseY, 0);
+  // // const gradient = makeGradient(canvas.width / 2, 0, 0);
+  // context.fillStyle = gradient;
+  // context.fill();
 
-  // drawSquiggle(startingPointX, startingPointY);
+  drawSquiggle(startingPointX, startingPointY);
 
   // // Squiggle width
   // context.beginPath();
@@ -154,8 +154,7 @@ function draw() {
   // for (let i = 0; i < 12; i++) {
   //   drawSquiggle(
   //     0 + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-  //     canvas.height / 2 + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-  //     i
+  //     canvas.height / 2 + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
   //   );
   // }
   // for (let i = 0; i < 13; i++) {
@@ -165,13 +164,13 @@ function draw() {
   //   );
   // }
 
-  // Top and left of a square
-  for (let i = 0; i < 10; i++) {
-    drawSquiggle(startingPointX + (10 - i) * DOT_SIZE * 0.9, startingPointY);
-  }
-  for (let i = 0; i < 10; i++) {
-    drawSquiggle(startingPointX, startingPointY + i * DOT_SIZE * 0.9);
-  }
+  // // Top and left of a square
+  // for (let i = 0; i < 10; i++) {
+  //   drawSquiggle(startingPointX + (10 - i) * DOT_SIZE * 0.9, startingPointY);
+  // }
+  // for (let i = 0; i < 10; i++) {
+  //   drawSquiggle(startingPointX, startingPointY + i * DOT_SIZE * 0.9);
+  // }
 
   window.requestAnimationFrame(draw);
 
