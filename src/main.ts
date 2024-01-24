@@ -28,7 +28,7 @@ const DOT_SIZE = 25;
 const GRADIENT_STOPS = 1;
 const WORM_LENGTH = 600;
 
-const startingPointX = DOT_SIZE / 2;
+const startingPointX = canvas.width / 2;
 const startingPointY = canvas.height / 2;
 
 const startOfAnimation = new Date();
@@ -115,7 +115,7 @@ function drawSquiggle(startX: number, startY: number) {
   // Draw the squiggle
   for (let segmentXValue = 0; segmentXValue < WORM_LENGTH; segmentXValue++) {
     context.lineTo(
-      startX + segmentXValue, // The wave isn't moving left/right, so we don't need to use animationPosition here
+      startX - segmentXValue, // The wave isn't moving left/right, so we don't need to use animationPosition here
       startY + calcSegYValue(segmentXValue, animationPosition)
     );
   }
@@ -153,14 +153,14 @@ function draw() {
   // // Circle
   // for (let i = 0; i < 12; i++) {
   //   drawSquiggle(
-  //     0 + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-  //     canvas.height / 2 + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
+  //     startingPointX + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+  //     startingPointY + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
   //   );
   // }
   // for (let i = 0; i < 13; i++) {
   //   drawSquiggle(
-  //     0 + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-  //     canvas.height / 2 - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
+  //     startingPointX + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+  //     startingPointY - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
   //   );
   // }
 
