@@ -30,7 +30,7 @@ const { canvas, context } = init2d();
 
 const WAVE_SPEED = 5;
 const DOT_SIZE = 25;
-const GRADIENT_STOPS = 1;
+const GRADIENT_STOPS = 3;
 const WORM_LENGTH = 600;
 
 const STARTING_POINT: Point = {

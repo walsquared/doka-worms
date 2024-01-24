@@ -11,4 +11,9 @@ body {
 canvas {
   display: flex;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  filter: url('#grain');
+}
+
+#svg-filters {
+  visibility: hidden;
 }
