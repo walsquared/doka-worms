@@ -24,9 +24,9 @@ function init2d() {
 const { canvas, context } = init2d();
 
 const WAVE_SPEED = 5;
-const DOT_SIZE = 20;
-const GRADIENT_STOPS = 2;
-const WORM_LENGTH = 700;
+const DOT_SIZE = 25;
+const GRADIENT_STOPS = 1;
+const WORM_LENGTH = 600;
 
 const startingPointX = DOT_SIZE / 2;
 const startingPointY = canvas.height / 2;
@@ -55,31 +55,42 @@ function makeGradient(
   animationPosition: number
 ): CanvasGradient {
   const gradientAnimationOffset = Math.sin(animationPosition / 40) * 100;
-  const gradientXOffset = (startX / canvas.width - 0.5) * 300;
-  const gradientYOffset = 1 - startY / canvas.height;
+  const gradientXOffset = 3 * (startX / canvas.width - 0.5) * 500;
+  const gradientYOffset = 3 * (startY / canvas.height - 0.5) * 100;
 
   const gradient = context.createLinearGradient(
-    0 + gradientXOffset + gradientAnimationOffset,
-    canvas.height,
-    canvas.width + gradientXOffset + gradientAnimationOffset,
-    canvas.height - gradientYOffset * canvas.height
+    0 -
+      canvas.width +
+      gradientXOffset -
+      gradientYOffset +
+      gradientAnimationOffset,
+    0,
+    canvas.width +
+      canvas.width +
+      gradientXOffset -
+      gradientYOffset +
+      gradientAnimationOffset,
+    0
   );
 
   // Adds 2x+1 color stops, where x is GRADIENT_STOPS
-  const gradientStopWidth = 1 / (GRADIENT_STOPS * 2);
+  // Add another canvas's color stops at the start and end so when the gradient moves left/right, it
+  //  doesn't show a solid color.
+  const gradientStopWidthRatio = 1 / (GRADIENT_STOPS * 2) / 3; // ÷3 because we're adding 2 more stops at the start and end
   gradient.addColorStop(0, 'darkblue');
-  gradient.addColorStop(gradientStopWidth / 4, 'blue');
+  gradient.addColorStop(gradientStopWidthRatio / 4, 'blue');
 
-  for (let i = 0; i < GRADIENT_STOPS; i++) {
-    gradient.addColorStop((2 * i + 1) * gradientStopWidth, 'red');
+  for (let i = 0; i < GRADIENT_STOPS * 3; i++) {
+    // ×3 because we're adding 2 more stops at the start and end
+    gradient.addColorStop((2 * i + 1) * gradientStopWidthRatio, 'red');
     gradient.addColorStop(
-      (2 * i + 2) * gradientStopWidth - gradientStopWidth / 4,
+      (2 * i + 2) * gradientStopWidthRatio - gradientStopWidthRatio / 4,
       'blue'
     );
-    gradient.addColorStop((2 * i + 2) * gradientStopWidth, 'darkblue');
+    gradient.addColorStop((2 * i + 2) * gradientStopWidthRatio, 'darkblue');
 
     const lastStopOfCycle =
-      (2 * i + 2) * gradientStopWidth + gradientStopWidth / 4;
+      (2 * i + 2) * gradientStopWidthRatio + gradientStopWidthRatio / 4;
     if (lastStopOfCycle <= 1) {
       gradient.addColorStop(lastStopOfCycle, 'blue');
     }
@@ -110,8 +121,8 @@ function drawSquiggle(startX: number, startY: number) {
   }
 
   // Stroke the worm with a gradient
-  // const gradient = makeGradient(startX, startY, animationPosition);
-  const gradient = makeGradient(startX, startY, 0);
+  const gradient = makeGradient(startX, startY, animationPosition);
+  // const gradient = makeGradient(startX, startY, 0);
   context.strokeStyle = gradient;
   context.stroke();
 
@@ -125,6 +136,7 @@ function draw() {
   // Test gradient on full screen
   context.rect(0, 0, canvas.width, canvas.height);
   const gradient = makeGradient(mouseX, mouseY, 0);
+  // const gradient = makeGradient(canvas.width / 2, 0, 0);
   context.fillStyle = gradient;
   context.fill();
 
@@ -155,10 +167,10 @@ function draw() {
 
   // Top and left of a square
   for (let i = 0; i < 10; i++) {
-    drawSquiggle(startingPointX + (10 - i) * 20, startingPointY);
+    drawSquiggle(startingPointX + (10 - i) * DOT_SIZE * 0.9, startingPointY);
   }
   for (let i = 0; i < 10; i++) {
-    drawSquiggle(startingPointX, startingPointY + i * 20);
+    drawSquiggle(startingPointX, startingPointY + i * DOT_SIZE * 0.9);
   }
 
   window.requestAnimationFrame(draw);
