@@ -29,7 +29,7 @@ function init2d() {
 const { canvas, context } = init2d();
 
 const WAVE_SPEED = 5;
-const DOT_SIZE = 25;
+const DOT_SIZE = 30;
 const GRADIENT_STOPS = 3;
 const WORM_LENGTH = 600;
 
@@ -44,6 +44,7 @@ const STARTING_POINT: Point = {
  * For points with the same x value, points score lower the lower their y value
  */
 function orderPoints(pointA: Point, pointB: Point): number {
+  // TODO: Fix ordering: top points are painting over bottom points
   return pointA.x === pointB.x ? pointA.y - pointB.y : pointB.x - pointA.x;
 }
 
@@ -85,7 +86,7 @@ function makeSquare(sizeInDots: number): Point[] {
   return points.sort(orderPoints);
 }
 
-const square = makeSquare(13);
+const square = makeSquare(5);
 
 const startOfAnimation = new Date();
 
@@ -133,22 +134,26 @@ function makeGradient(
   // Add another canvas's color stops at the start and end so when the gradient moves left/right, it
   //  doesn't show a solid color.
   const gradientStopWidthRatio = 1 / (GRADIENT_STOPS * 2) / 3; // ÷3 because we're adding 2 more stops at the start and end
-  gradient.addColorStop(0, 'darkblue');
-  gradient.addColorStop(gradientStopWidthRatio / 4, 'blue');
+  const red = 'rgb(242, 0, 40)';
+  const blue = 'rgb(26, 1, 174)';
+  const darkblue = 'rgb(20, 0, 117)';
+
+  gradient.addColorStop(0, darkblue);
+  gradient.addColorStop(gradientStopWidthRatio / 5, blue);
 
   for (let i = 0; i < GRADIENT_STOPS * 3; i++) {
     // ×3 because we're adding 2 more stops at the start and end
-    gradient.addColorStop((2 * i + 1) * gradientStopWidthRatio, 'red');
+    gradient.addColorStop((2 * i + 1) * gradientStopWidthRatio, red);
     gradient.addColorStop(
-      (2 * i + 2) * gradientStopWidthRatio - gradientStopWidthRatio / 4,
-      'blue'
+      (2 * i + 2) * gradientStopWidthRatio - gradientStopWidthRatio / 5,
+      blue
     );
-    gradient.addColorStop((2 * i + 2) * gradientStopWidthRatio, 'darkblue');
+    gradient.addColorStop((2 * i + 2) * gradientStopWidthRatio, darkblue);
 
     const lastStopOfCycle =
-      (2 * i + 2) * gradientStopWidthRatio + gradientStopWidthRatio / 4;
+      (2 * i + 2) * gradientStopWidthRatio + gradientStopWidthRatio / 5;
     if (lastStopOfCycle <= 1) {
-      gradient.addColorStop(lastStopOfCycle, 'blue');
+      gradient.addColorStop(lastStopOfCycle, blue);
     }
   }
 
@@ -206,21 +211,23 @@ function draw() {
   // context.strokeStyle = 'white';
   // context.stroke();
 
-  // // Circle
-  // for (let i = 0; i < 12; i++) {
-  //   drawSquiggle(
-  //     STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-  //     STARTING_POINT.y + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
-  //   );
-  // }
-  // for (let i = 0; i < 13; i++) {
-  //   drawSquiggle(
-  //     STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-  //     STARTING_POINT.y - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI
-  //   );
-  // }
+  // Circle
+  const circle: Point[] = [];
+  for (let i = 0; i < 12; i++) {
+    circle.push({
+      x: STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+      y: STARTING_POINT.y + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+    });
+  }
+  for (let i = 0; i < 13; i++) {
+    circle.push({
+      x: STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+      y: STARTING_POINT.y - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+    });
+  }
 
-  square.forEach((point) => drawSquiggle(point.x, point.y));
+  circle.forEach((point) => drawSquiggle(point.x, point.y));
+  // square.forEach((point) => drawSquiggle(point.x, point.y));
 
   window.requestAnimationFrame(draw);
 
