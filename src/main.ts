@@ -40,11 +40,11 @@ const STARTING_POINT: Point = {
 
 /**
  * A function to be passed to Array.sort().
- * Points always score lower the higher their x value
+ * Points further left are considered greater so that they are drawn last and are therefore on top.
  * For points with the same x value, points score lower the lower their y value
  */
 function orderPoints(pointA: Point, pointB: Point): number {
-  // TODO: Fix ordering: top points are painting over bottom points
+  // TODO: Make it so somehow points close to the bottom left are rendered on top
   return pointA.x === pointB.x ? pointA.y - pointB.y : pointB.x - pointA.x;
 }
 
@@ -52,7 +52,7 @@ function makeSquare(sizeInDots: number): Point[] {
   if (sizeInDots === 0) return [];
   if (sizeInDots === 1) return [STARTING_POINT];
 
-  const adjustedDotSize = DOT_SIZE * 0.9; // This removes a small between the squiggles
+  const adjustedDotSize = DOT_SIZE * 0.9; // This removes a small gap between the squiggles
 
   const points: Point[] = [];
   const sizeLength = adjustedDotSize * (sizeInDots - 1); // -1 because the dots' origins are centered
@@ -86,7 +86,40 @@ function makeSquare(sizeInDots: number): Point[] {
   return points.sort(orderPoints);
 }
 
+function makeCircle() {
+  const circle: Point[] = [];
+  for (let i = 0; i < 12; i++) {
+    circle.push({
+      x: STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+      y: STARTING_POINT.y + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+    });
+  }
+  for (let i = 0; i < 13; i++) {
+    circle.push({
+      x: STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+      y: STARTING_POINT.y - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
+    });
+  }
+
+  return circle.sort(orderPoints);
+}
+
+function makeVerticalLine(length: number) {
+  const adjustedDotSize = DOT_SIZE * 0.9;
+
+  const line: Point[] = [];
+  for (let i = 0; i < length; i++) {
+    line.push({
+      x: STARTING_POINT.x,
+      y: STARTING_POINT.y + adjustedDotSize * i,
+    });
+  }
+  return line.sort(orderPoints);
+}
+
 const square = makeSquare(5);
+const circle = makeCircle();
+const line = makeVerticalLine(6);
 
 const startOfAnimation = new Date();
 
@@ -211,23 +244,9 @@ function draw() {
   // context.strokeStyle = 'white';
   // context.stroke();
 
-  // Circle
-  const circle: Point[] = [];
-  for (let i = 0; i < 12; i++) {
-    circle.push({
-      x: STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-      y: STARTING_POINT.y + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-    });
-  }
-  for (let i = 0; i < 13; i++) {
-    circle.push({
-      x: STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-      y: STARTING_POINT.y - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-    });
-  }
-
   circle.forEach((point) => drawSquiggle(point.x, point.y));
   // square.forEach((point) => drawSquiggle(point.x, point.y));
+  // line.forEach((point) => drawSquiggle(point.x, point.y));
 
   window.requestAnimationFrame(draw);
 
