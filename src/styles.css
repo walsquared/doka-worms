@@ -16,4 +16,5 @@ canvas {
 
 #svg-filters {
   visibility: hidden;
+  position: absolute;
 }

@@ -31,7 +31,7 @@ const { canvas, context } = init2d();
 const WAVE_SPEED = 5;
 const DOT_SIZE = 30;
 const GRADIENT_STOPS = 3;
-const WORM_LENGTH = 600;
+const WORM_LENGTH = 300;
 
 const STARTING_POINT: Point = {
   x: canvas.width / 2,
@@ -40,11 +40,10 @@ const STARTING_POINT: Point = {
 
 /**
  * A function to be passed to Array.sort().
- * Points further left are considered greater so that they are drawn last and are therefore on top.
- * For points with the same x value, points score lower the lower their y value
+ * Points further left are considered greater so that they are drawn last (therefore on top).
+ * For points with the same x value, pointers further down are considered greater.
  */
 function orderPoints(pointA: Point, pointB: Point): number {
-  // TODO: Make it so somehow points close to the bottom left are rendered on top
   return pointA.x === pointB.x ? pointA.y - pointB.y : pointB.x - pointA.x;
 }
 
@@ -124,10 +123,10 @@ const line = makeVerticalLine(6);
 const startOfAnimation = new Date();
 
 function calcSegYValue(segX: number, animationPos: number): number {
-  // A value to amplify the size of the wave
+  // As this value increases, the wave becomes taller
   const amplitudeModifier = 45;
 
-  // A value to decrease slow down the wave's up and down movement
+  // As this value increases, the wave becomes longer
   const frequencyModifier = 35;
 
   return (
@@ -164,7 +163,7 @@ function makeGradient(
   );
 
   // Adds 2x+1 color stops, where x is GRADIENT_STOPS
-  // Add another canvas's color stops at the start and end so when the gradient moves left/right, it
+  // Add another canvas's worth of color stops at the start and end so when the gradient moves left/right, it
   //  doesn't show a solid color.
   const gradientStopWidthRatio = 1 / (GRADIENT_STOPS * 2) / 3; // ÷3 because we're adding 2 more stops at the start and end
   const red = 'rgb(242, 0, 40)';
@@ -174,8 +173,8 @@ function makeGradient(
   gradient.addColorStop(0, darkblue);
   gradient.addColorStop(gradientStopWidthRatio / 5, blue);
 
+  // ×3 because we're adding 2 more stops at the start and end
   for (let i = 0; i < GRADIENT_STOPS * 3; i++) {
-    // ×3 because we're adding 2 more stops at the start and end
     gradient.addColorStop((2 * i + 1) * gradientStopWidthRatio, red);
     gradient.addColorStop(
       (2 * i + 2) * gradientStopWidthRatio - gradientStopWidthRatio / 5,
