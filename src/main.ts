@@ -1,10 +1,11 @@
 // https://www.volkshotel.nl/content/uploads/2023/09/DOKA_SITE_v2.mp4
 // In action: https://www.volkshotel.nl/en/doka
+import makeSquare from './shapes/square';
+import makeCircle from './shapes/circle';
+import makeLine from './shapes/line';
+import { Point } from './types';
 
-type Point = {
-  x: number;
-  y: number;
-};
+const allPoints: Point[] = [];
 
 let mouseX = 0;
 let mouseY = 0;
@@ -33,10 +34,7 @@ const DOT_SIZE = 30;
 const GRADIENT_STOPS = 3;
 const WORM_LENGTH = 300;
 
-const STARTING_POINT: Point = {
-  x: canvas.width / 2,
-  y: canvas.height / 2,
-};
+const START_OF_PROGRAM = new Date();
 
 /**
  * A function to be passed to Array.sort().
@@ -46,81 +44,6 @@ const STARTING_POINT: Point = {
 function orderPoints(pointA: Point, pointB: Point): number {
   return pointA.x === pointB.x ? pointA.y - pointB.y : pointB.x - pointA.x;
 }
-
-function makeSquare(sizeInDots: number): Point[] {
-  if (sizeInDots === 0) return [];
-  if (sizeInDots === 1) return [STARTING_POINT];
-
-  const adjustedDotSize = DOT_SIZE * 0.9; // This removes a small gap between the squiggles
-
-  const points: Point[] = [];
-  const sizeLength = adjustedDotSize * (sizeInDots - 1); // -1 because the dots' origins are centered
-
-  for (let i = 0; i < sizeInDots; i++) {
-    // Top size
-    points.push({
-      x: STARTING_POINT.x - sizeLength / 2 + adjustedDotSize * i,
-      y: STARTING_POINT.y - sizeLength / 2,
-    });
-
-    // Right side
-    points.push({
-      x: STARTING_POINT.x + sizeLength / 2,
-      y: STARTING_POINT.y - sizeLength / 2 + adjustedDotSize * i,
-    });
-
-    // Bottom side
-    points.push({
-      x: STARTING_POINT.x + sizeLength / 2 - adjustedDotSize * i,
-      y: STARTING_POINT.y + sizeLength / 2,
-    });
-
-    // Left side
-    points.push({
-      x: STARTING_POINT.x - sizeLength / 2,
-      y: STARTING_POINT.y + sizeLength / 2 - adjustedDotSize * i,
-    });
-  }
-
-  return points.sort(orderPoints);
-}
-
-function makeCircle() {
-  const circle: Point[] = [];
-  for (let i = 0; i < 12; i++) {
-    circle.push({
-      x: STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-      y: STARTING_POINT.y + Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-    });
-  }
-  for (let i = 0; i < 13; i++) {
-    circle.push({
-      x: STARTING_POINT.x + Math.cos((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-      y: STARTING_POINT.y - Math.sin((i / 12) * Math.PI) * DOT_SIZE * Math.PI,
-    });
-  }
-
-  return circle.sort(orderPoints);
-}
-
-function makeVerticalLine(length: number) {
-  const adjustedDotSize = DOT_SIZE * 0.9;
-
-  const line: Point[] = [];
-  for (let i = 0; i < length; i++) {
-    line.push({
-      x: STARTING_POINT.x,
-      y: STARTING_POINT.y + adjustedDotSize * i,
-    });
-  }
-  return line.sort(orderPoints);
-}
-
-const square = makeSquare(5);
-const circle = makeCircle();
-const line = makeVerticalLine(6);
-
-const startOfAnimation = new Date();
 
 function calcSegYValue(segX: number, animationPos: number): number {
   // As this value increases, the wave becomes taller
@@ -192,13 +115,24 @@ function makeGradient(
   return gradient;
 }
 
+/**
+ * A function that draws the gradient given to squiggles on the whole screen.
+ * The gradient displayed is the one that would be used for a squiggle if that was drawn at the current cursor position.
+ */
+function testGradient() {
+  context.rect(0, 0, canvas.width, canvas.height);
+  const gradient = makeGradient(mouseX, mouseY, 0);
+  context.fillStyle = gradient;
+  context.fill();
+}
+
 function drawSquiggle(startX: number, startY: number) {
   context.save();
 
   // Time since start of animation, multiplied by a factor to make it configurable
   const now = new Date();
   const animationPosition =
-    ((now.getTime() - startOfAnimation.getTime()) / 100) * WAVE_SPEED;
+    ((now.getTime() - START_OF_PROGRAM.getTime()) / 100) * WAVE_SPEED;
 
   context.beginPath();
   context.moveTo(startX, startY + calcSegYValue(0, animationPosition));
@@ -226,30 +160,41 @@ function drawSquiggle(startX: number, startY: number) {
 function draw() {
   context.clearRect(0, 0, canvas.width, canvas.height);
 
-  // // Test gradient on full screen
-  // context.rect(0, 0, canvas.width, canvas.height);
-  // const gradient = makeGradient(mouseX, mouseY, 0);
-  // // const gradient = makeGradient(canvas.width / 2, 0, 0);
-  // context.fillStyle = gradient;
-  // context.fill();
+  // testGradient();
 
-  // drawSquiggle(STARTING_POINT.x, STARTING_POINT.y);
-
-  // // Squiggle width
-  // context.beginPath();
-  // context.moveTo(STARTING_POINT.x, STARTING_POINT.y);
-  // context.lineTo(STARTING_POINT.x + WORM_LENGTH, STARTING_POINT.y);
-  // context.lineWidth = 1;
-  // context.strokeStyle = 'white';
-  // context.stroke();
-
-  circle.forEach((point) => drawSquiggle(point.x, point.y));
-  // square.forEach((point) => drawSquiggle(point.x, point.y));
-  // line.forEach((point) => drawSquiggle(point.x, point.y));
+  allPoints.forEach((point) => drawSquiggle(point.x, point.y));
 
   window.requestAnimationFrame(draw);
 
   return draw;
 }
 
+const square = makeSquare({
+  dotSize: DOT_SIZE,
+  startingPoint: {
+    x: (canvas.width / 4) * 3,
+    y: canvas.height / 2,
+  },
+})(5);
+allPoints.push(...square);
+
+const line = makeLine({
+  dotSize: DOT_SIZE,
+  startingPoint: {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+  },
+})(5, 0);
+allPoints.push(...line);
+
+const circle = makeCircle({
+  dotSize: DOT_SIZE,
+  startingPoint: {
+    x: canvas.width / 4,
+    y: canvas.height / 2,
+  },
+})(60);
+allPoints.push(...circle);
+
+allPoints.sort(orderPoints);
 draw();
