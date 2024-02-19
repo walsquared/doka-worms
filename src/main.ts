@@ -5,29 +5,23 @@ import makeCircle from './shapes/circle';
 import makeLine from './shapes/line';
 import { Point } from './types';
 
-const allPoints: Point[] = [];
+const canvas = document.getElementById('main-canvas')! as HTMLCanvasElement;
+const context = canvas.getContext('2d')!;
 
 let mouseX = 0;
 let mouseY = 0;
 
-function init2d() {
-  const canvas = document.getElementById('main-canvas');
-  if (!canvas) throw new Error('Canvas not found');
+let lastDotPlaced: Point | null = null;
+let placeToPlot: Point = { x: mouseX, y: mouseY };
 
-  const canvasElement = canvas as HTMLCanvasElement;
-  const ctx = canvasElement.getContext('2d');
-  if (!ctx) throw new Error('Context not found');
+const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
 
-  const { x: canvasX, y: canvasY } = canvasElement.getBoundingClientRect();
-  canvasElement.addEventListener('mousemove', (event: MouseEvent) => {
-    mouseX = event.x - canvasX;
-    mouseY = event.y - canvasY;
-  });
+canvas.addEventListener('mousemove', (event: MouseEvent) => {
+  mouseX = event.x - canvasX;
+  mouseY = event.y - canvasY;
+});
 
-  return { canvas: canvasElement, context: ctx };
-}
-
-const { canvas, context } = init2d();
+const IS_EDITING = true;
 
 const WAVE_SPEED = 5;
 const DOT_SIZE = 30;
@@ -36,6 +30,8 @@ const WORM_LENGTH = 300;
 
 const START_OF_PROGRAM = new Date();
 
+const allPoints: Point[] = [];
+
 /**
  * A function to be passed to Array.sort().
  * Points further left are considered greater so that they are drawn last (therefore on top).
@@ -43,6 +39,11 @@ const START_OF_PROGRAM = new Date();
  */
 function orderPoints(pointA: Point, pointB: Point): number {
   return pointA.x === pointB.x ? pointA.y - pointB.y : pointB.x - pointA.x;
+}
+
+function addPoints(points: Point[]) {
+  allPoints.push(...points);
+  allPoints.sort(orderPoints);
 }
 
 function calcSegYValue(segX: number, animationPos: number): number {
@@ -131,8 +132,9 @@ function drawSquiggle(startX: number, startY: number) {
 
   // Time since start of animation, multiplied by a factor to make it configurable
   const now = new Date();
-  const animationPosition =
-    ((now.getTime() - START_OF_PROGRAM.getTime()) / 100) * WAVE_SPEED;
+  const animationPosition = IS_EDITING
+    ? 0
+    : ((now.getTime() - START_OF_PROGRAM.getTime()) / 100) * WAVE_SPEED;
 
   context.beginPath();
   context.moveTo(startX, startY + calcSegYValue(0, animationPosition));
@@ -164,9 +166,54 @@ function draw() {
 
   allPoints.forEach((point) => drawSquiggle(point.x, point.y));
 
-  window.requestAnimationFrame(draw);
+  // ------------------------------
+  // EDITOR
+  // ------------------------------
 
-  return draw;
+  if (IS_EDITING) {
+    context.beginPath();
+    context.strokeStyle = 'white';
+
+    if (lastDotPlaced) {
+      // Find from the last point to the mouse
+      const theta = Math.atan2(
+        mouseY - lastDotPlaced.y,
+        mouseX - lastDotPlaced.x
+      );
+
+      placeToPlot = {
+        x: lastDotPlaced.x + Math.cos(theta) * DOT_SIZE * 0.9,
+        y: lastDotPlaced.y + Math.sin(theta) * DOT_SIZE * 0.9,
+      };
+    } else {
+      placeToPlot = {
+        x: mouseX,
+        y: mouseY,
+      };
+    }
+
+    context.arc(placeToPlot.x, placeToPlot.y, DOT_SIZE / 2, 0, Math.PI * 2);
+    context.stroke();
+    context.closePath();
+
+    context.font = `${DOT_SIZE * 10}px Arial`;
+    context.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    context.textAlign = 'center';
+    // context.fillText(
+    //   'The quick brown fox jumps over the lazy dog Doka',
+    //   canvas.width / 2,
+    //   canvas.height / 2
+    // );
+
+    const text = 'Juba';
+    const metrics = context.measureText(text);
+    console.log(metrics);
+    context.fillText(text, canvas.width / 2, canvas.height / 2);
+  }
+
+  // ------------------------------
+
+  window.requestAnimationFrame(draw);
 }
 
 const square = makeSquare({
@@ -176,7 +223,6 @@ const square = makeSquare({
     y: canvas.height / 2,
   },
 })(5);
-allPoints.push(...square);
 
 const line = makeLine({
   dotSize: DOT_SIZE,
@@ -185,7 +231,6 @@ const line = makeLine({
     y: canvas.height / 2,
   },
 })(5, 0);
-allPoints.push(...line);
 
 const circle = makeCircle({
   dotSize: DOT_SIZE,
@@ -194,7 +239,36 @@ const circle = makeCircle({
     y: canvas.height / 2,
   },
 })(60);
-allPoints.push(...circle);
 
-allPoints.sort(orderPoints);
+// addPoints([...square, ...line, ...circle]);
+
 draw();
+
+// Write the word "Doka" on the canvas
+
+// console.log('A', context.measureText('A'));
+// console.log('a', context.measureText('a'));
+
+// ------------------------------
+// Editor
+// ------------------------------
+
+canvas.addEventListener('click', () => {
+  if (!IS_EDITING) return;
+
+  if (placeToPlot) {
+    addPoints([placeToPlot]);
+    lastDotPlaced = placeToPlot;
+  } else {
+    const mousePosition = { x: mouseX, y: mouseY };
+    addPoints([mousePosition]);
+    lastDotPlaced = mousePosition;
+  }
+});
+
+// Release the cursor "lock" when spacebar is clicked
+window.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (IS_EDITING && lastDotPlaced && event.key === ' ') {
+    lastDotPlaced = null;
+  }
+});
