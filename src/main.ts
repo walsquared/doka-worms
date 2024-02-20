@@ -267,12 +267,16 @@ canvas.addEventListener('click', () => {
 });
 
 // Release the cursor "lock" when tab is pressed
+function releaseCursor() {
+  lastDotPlaced = null;
+}
 window.addEventListener('keydown', (event: KeyboardEvent) => {
   if (isEditing && lastDotPlaced && event.key === 'Tab') {
-    lastDotPlaced = null;
+    releaseCursor();
   }
 });
 
+// Playback button
 const playbackButton = document.getElementById('playback-toggle')!;
 
 function togglePlayback() {
@@ -280,11 +284,11 @@ function togglePlayback() {
 
   if (isEditing) {
     (playbackButton.children[0] as HTMLImageElement).src = './icons/play.svg';
-    playbackButton.classList.add('is-active');
+    playbackButton.classList.add('active');
   } else {
     startOfTimeline = new Date();
     (playbackButton.children[0] as HTMLImageElement).src = './icons/pause.svg';
-    playbackButton.classList.remove('is-active');
+    playbackButton.classList.remove('active');
   }
 }
 
@@ -293,3 +297,9 @@ window.addEventListener(
   (event: KeyboardEvent) => event.key === ' ' && togglePlayback()
 );
 playbackButton.addEventListener('click', togglePlayback);
+
+// Clear canvas button
+document.getElementById('clear-canvas')!.addEventListener('click', () => {
+  allPoints.splice(0, allPoints.length);
+  releaseCursor();
+});
