@@ -30,7 +30,29 @@
       </defs>
     </svg>
 
-    <canvas id="main-canvas" width="960" height="540"></canvas>
+    <div class="viewport">
+      <div class="canvas-wrapper">
+        <canvas id="main-canvas" width="960" height="540"></canvas>
+      </div>
+      <div class="toolbox">
+        <button id="playback-toggle" class="toolbox-button">
+          <img src="./icons/pause.svg" />
+        </button>
+      </div>
+    </div>
+
+    <div class="description">
+      <h1>Doka-<br />Worm</h1>
+      <p>
+        Inspired by
+        <a
+          href="https://www.volkshotel.nl/en/doka"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Club Doka's website</a
+        >, this is a tool to build a fun squiggly effect.
+      </p>
+    </div>
     <script type="module" src="src/main.ts"></script>
   </body>
 </html>

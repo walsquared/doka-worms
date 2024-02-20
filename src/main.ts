@@ -21,14 +21,14 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
   mouseY = event.y - canvasY;
 });
 
-const IS_EDITING = true;
+let isEditing = false;
 
 const WAVE_SPEED = 5;
 const DOT_SIZE = 30;
 const GRADIENT_STOPS = 3;
 const WORM_LENGTH = 300;
 
-const START_OF_PROGRAM = new Date();
+let startOfTimeline = new Date();
 
 const allPoints: Point[] = [];
 
@@ -132,9 +132,9 @@ function drawSquiggle(startX: number, startY: number) {
 
   // Time since start of animation, multiplied by a factor to make it configurable
   const now = new Date();
-  const animationPosition = IS_EDITING
+  const animationPosition = isEditing
     ? 0
-    : ((now.getTime() - START_OF_PROGRAM.getTime()) / 100) * WAVE_SPEED;
+    : ((now.getTime() - startOfTimeline.getTime()) / 100) * WAVE_SPEED;
 
   context.beginPath();
   context.moveTo(startX, startY + calcSegYValue(0, animationPosition));
@@ -170,7 +170,7 @@ function draw() {
   // EDITOR
   // ------------------------------
 
-  if (IS_EDITING) {
+  if (isEditing) {
     context.beginPath();
     context.strokeStyle = 'white';
 
@@ -205,9 +205,9 @@ function draw() {
     //   canvas.height / 2
     // );
 
-    const text = 'Juba';
+    const text = 'Doka';
     const metrics = context.measureText(text);
-    console.log(metrics);
+
     context.fillText(text, canvas.width / 2, canvas.height / 2);
   }
 
@@ -254,7 +254,7 @@ draw();
 // ------------------------------
 
 canvas.addEventListener('click', () => {
-  if (!IS_EDITING) return;
+  if (!isEditing) return;
 
   if (placeToPlot) {
     addPoints([placeToPlot]);
@@ -266,9 +266,30 @@ canvas.addEventListener('click', () => {
   }
 });
 
-// Release the cursor "lock" when spacebar is clicked
+// Release the cursor "lock" when tab is pressed
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (IS_EDITING && lastDotPlaced && event.key === ' ') {
+  if (isEditing && lastDotPlaced && event.key === 'Tab') {
     lastDotPlaced = null;
   }
 });
+
+const playbackButton = document.getElementById('playback-toggle')!;
+
+function togglePlayback() {
+  isEditing = !isEditing;
+
+  if (isEditing) {
+    (playbackButton.children[0] as HTMLImageElement).src = './icons/play.svg';
+    playbackButton.classList.add('is-active');
+  } else {
+    startOfTimeline = new Date();
+    (playbackButton.children[0] as HTMLImageElement).src = './icons/pause.svg';
+    playbackButton.classList.remove('is-active');
+  }
+}
+
+window.addEventListener(
+  'keydown',
+  (event: KeyboardEvent) => event.key === ' ' && togglePlayback()
+);
+playbackButton.addEventListener('click', togglePlayback);

@@ -1,3 +1,13 @@
+@font-face {
+  font-family: CooperHewitt;
+  src: url('../fonts/CooperHewitt-Heavy.otf');
+}
+
+@font-face {
+  font-family: OfficeCodePro;
+  src: url('../fonts/OfficeCodePro-Light.otf');
+}
+
 body {
   margin: 0;
   display: flex;
@@ -6,15 +16,98 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: black;
-}
-
-canvas {
-  display: flex;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  filter: url('#grain');
+  gap: 20px;
 }
 
 #svg-filters {
   visibility: hidden;
   position: absolute;
+}
+
+.viewport {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.canvas-wrapper {
+  border: 2px solid white;
+
+  & canvas {
+    display: flex;
+    filter: url('#grain');
+  }
+}
+
+.toolbox {
+  border: 2px solid white;
+  background-color: white;
+  display: flex;
+  gap: 2px;
+
+  & .toolbox-button {
+    /* button reset */
+    border: none;
+    padding: 0;
+    background: none;
+    /* reset over */
+
+    border-color: white;
+    background-color: black;
+
+    display: flex;
+    place-items: center;
+    padding: 6px;
+
+    &:hover {
+      background-color: rgb(50, 50, 50);
+    }
+
+    &.is-active {
+      background-color: white;
+      color: black;
+
+      &:hover {
+        background-color: rgb(225, 225, 225);
+      }
+    }
+  }
+}
+
+.description {
+  border: 2px solid white;
+
+  padding: 10px;
+
+  max-width: 400px;
+
+  display: flex;
+  flex-direction: column;
+
+  color: white;
+  font-family: OfficeCodePro, monospace;
+
+  & h1 {
+    margin: 0;
+    font-family: CooperHewitt, sans-serif;
+    text-transform: uppercase;
+    font-size: 6rem;
+  }
+
+  & a,
+  & a:active,
+  & a:visited {
+    color: white;
+    text-decoration: underline;
+  }
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+
+  & input {
+    margin-right: 1ch;
+  }
 }

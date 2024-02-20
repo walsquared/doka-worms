@@ -1,4 +1,4 @@
-import { Point, ShapeFnConfig } from '~/types';
+import { Point, ShapeFnConfig } from '~/src/types';
 
 export default ({ dotSize, startingPoint }: ShapeFnConfig) =>
   (sideLengthInDots: number): Point[] => {
