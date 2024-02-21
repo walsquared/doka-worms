@@ -4,6 +4,7 @@ import makeSquare from './shapes/square';
 import makeCircle from './shapes/circle';
 import makeLine from './shapes/line';
 import { Point } from './types';
+import DokaJson from './doka-word.json';
 
 type PointWithOrder = Point & { index: number };
 
@@ -54,6 +55,9 @@ function addPoints(points: Point[]) {
   );
   allPoints.sort(orderPoints);
 }
+
+// Add the points from the Doka word
+addPoints(DokaJson);
 
 function calcSegYValue(segX: number, animationPos: number): number {
   // As this value increases, the wave becomes taller
@@ -201,23 +205,10 @@ function draw() {
       };
     }
 
+    // Draw the cursor
     context.arc(placeToPlot.x, placeToPlot.y, DOT_SIZE / 2, 0, Math.PI * 2);
     context.stroke();
     context.closePath();
-
-    context.font = `${DOT_SIZE * 10}px Arial`;
-    context.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    context.textAlign = 'center';
-    // context.fillText(
-    //   'The quick brown fox jumps over the lazy dog Doka',
-    //   canvas.width / 2,
-    //   canvas.height / 2
-    // );
-
-    const text = 'Doka';
-    const metrics = context.measureText(text);
-
-    context.fillText(text, canvas.width / 2, canvas.height / 2);
   }
 
   // ------------------------------
@@ -262,6 +253,31 @@ draw();
 // Editor
 // ------------------------------
 
+const undoButton = document.getElementById('undo-button')!;
+const redoButton = document.getElementById('redo-button')!;
+const clearCanvasButton = document.getElementById('clear-canvas')!;
+
+function updateEditOnlyButtons() {
+  if (!isEditing || allPoints.length === 0) {
+    undoButton.setAttribute('disabled', 'true');
+  } else {
+    undoButton.removeAttribute('disabled');
+  }
+
+  if (!isEditing || redoList.length === 0) {
+    redoButton.setAttribute('disabled', 'true');
+  } else {
+    redoButton.removeAttribute('disabled');
+  }
+
+  if (!isEditing) {
+    clearCanvasButton.setAttribute('disabled', 'true');
+  } else {
+    clearCanvasButton.removeAttribute('disabled');
+  }
+}
+updateEditOnlyButtons();
+
 canvas.addEventListener('click', () => {
   if (!isEditing) return;
 
@@ -276,7 +292,7 @@ canvas.addEventListener('click', () => {
 
   redoList.splice(0, redoList.length); // Clear the redo list
 
-  updateUndoRedoButtons();
+  updateEditOnlyButtons();
 });
 
 // Release the cursor "lock" when tab is pressed
@@ -289,24 +305,6 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
 });
 
 // Undo/Redo buttons
-const undoButton = document.getElementById('undo-button')!;
-const redoButton = document.getElementById('redo-button')!;
-
-function updateUndoRedoButtons() {
-  if (!isEditing || allPoints.length === 0) {
-    undoButton.setAttribute('disabled', 'true');
-  } else {
-    undoButton.removeAttribute('disabled');
-  }
-
-  if (!isEditing || redoList.length === 0) {
-    redoButton.setAttribute('disabled', 'true');
-  } else {
-    redoButton.removeAttribute('disabled');
-  }
-}
-updateUndoRedoButtons();
-
 function undo() {
   if (allPoints.length === 0) return;
 
@@ -323,7 +321,7 @@ function undo() {
     )!;
   }
 
-  updateUndoRedoButtons();
+  updateEditOnlyButtons();
 }
 
 undoButton.addEventListener('click', undo);
@@ -340,7 +338,7 @@ function redo() {
 
   lastDotPlaced = pointToAdd;
 
-  updateUndoRedoButtons();
+  updateEditOnlyButtons();
 }
 
 redoButton.addEventListener('click', redo);
@@ -363,6 +361,8 @@ function togglePlayback() {
     (playbackButton.children[0] as HTMLImageElement).src = './icons/pause.svg';
     playbackButton.classList.remove('active');
   }
+
+  updateEditOnlyButtons();
 }
 
 window.addEventListener(
@@ -375,5 +375,6 @@ playbackButton.addEventListener('click', togglePlayback);
 function clearCanvas() {
   allPoints.splice(0, allPoints.length);
   releaseCursor();
+  updateEditOnlyButtons();
 }
-document.getElementById('clear-canvas')!.addEventListener('click', clearCanvas);
+clearCanvasButton.addEventListener('click', clearCanvas);
