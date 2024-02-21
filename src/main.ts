@@ -14,8 +14,12 @@ const context = canvas.getContext('2d')!;
 let mouseX = 0;
 let mouseY = 0;
 
+// Wand tool variables
 let lastDotPlaced: Point | null = null;
 let placeToPlot: Point = { x: mouseX, y: mouseY };
+
+// Line Tool variables
+let lineSegments: Point[] = [];
 
 const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
 
@@ -30,6 +34,8 @@ let activeTool: Tool = 'wand';
 
 const WAVE_SPEED = 5;
 const DOT_SIZE = 30;
+// This is the distance between the centers of two dots to create pretty overlap
+const AESTHETIC_DOT_DISTANCE = DOT_SIZE * 0.9;
 const GRADIENT_STOPS = 3;
 const WORM_LENGTH = 300;
 
@@ -174,6 +180,16 @@ function drawSquiggle(startX: number, startY: number) {
   context.restore();
 }
 
+function drawTelegraphy(points: Point[]) {
+  points.forEach((point) => {
+    context.beginPath();
+    context.strokeStyle = 'white';
+    context.arc(point.x, point.y, DOT_SIZE / 2, 0, Math.PI * 2);
+    context.stroke();
+    context.closePath();
+  });
+}
+
 function draw() {
   context.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -186,31 +202,63 @@ function draw() {
   // ------------------------------
 
   if (!isPlaying) {
-    context.beginPath();
-    context.strokeStyle = 'white';
+    switch (activeTool) {
+      case 'wand': {
+        if (lastDotPlaced) {
+          // Find from the last point to the mouse
+          const theta = Math.atan2(
+            mouseY - lastDotPlaced.y,
+            mouseX - lastDotPlaced.x
+          );
 
-    if (lastDotPlaced) {
-      // Find from the last point to the mouse
-      const theta = Math.atan2(
-        mouseY - lastDotPlaced.y,
-        mouseX - lastDotPlaced.x
-      );
+          placeToPlot = {
+            x: lastDotPlaced.x + Math.cos(theta) * AESTHETIC_DOT_DISTANCE,
+            y: lastDotPlaced.y + Math.sin(theta) * AESTHETIC_DOT_DISTANCE,
+          };
+        } else {
+          placeToPlot = {
+            x: mouseX,
+            y: mouseY,
+          };
+        }
 
-      placeToPlot = {
-        x: lastDotPlaced.x + Math.cos(theta) * DOT_SIZE * 0.9,
-        y: lastDotPlaced.y + Math.sin(theta) * DOT_SIZE * 0.9,
-      };
-    } else {
-      placeToPlot = {
-        x: mouseX,
-        y: mouseY,
-      };
+        // Draw the cursor
+        drawTelegraphy([placeToPlot]);
+        break;
+      }
+      case 'line': {
+        if (lineSegments.length !== 0) {
+          lineSegments.splice(1, lineSegments.length - 1);
+          const calcRemainingDistanceToCursor = () => {
+            const lastSegment = lineSegments[lineSegments.length - 1];
+
+            return Math.sqrt(
+              Math.pow(lastSegment.x - mouseX, 2) +
+                Math.pow(lastSegment.y - mouseY, 2)
+            );
+          };
+
+          while (calcRemainingDistanceToCursor() > AESTHETIC_DOT_DISTANCE) {
+            const lastSegment = lineSegments[lineSegments.length - 1];
+            const theta = Math.atan2(
+              mouseY - lastSegment.y,
+              mouseX - lastSegment.x
+            );
+
+            lineSegments.push({
+              x: lastSegment.x + Math.cos(theta) * AESTHETIC_DOT_DISTANCE,
+              y: lastSegment.y + Math.sin(theta) * AESTHETIC_DOT_DISTANCE,
+            });
+          }
+
+          drawTelegraphy(lineSegments);
+        } else {
+          // Draw free cursor
+          drawTelegraphy([{ x: mouseX, y: mouseY }]);
+        }
+        break;
+      }
     }
-
-    // Draw the cursor
-    context.arc(placeToPlot.x, placeToPlot.y, DOT_SIZE / 2, 0, Math.PI * 2);
-    context.stroke();
-    context.closePath();
   }
 
   // ------------------------------
@@ -302,30 +350,89 @@ function updateToolbox() {
 }
 updateToolbox();
 
-canvas.addEventListener('click', () => {
+canvas.addEventListener('mousedown', () => {
   if (isPlaying) return;
 
-  if (placeToPlot) {
-    addPoints([placeToPlot]);
-    lastDotPlaced = placeToPlot;
-  } else {
-    const mousePosition = { x: mouseX, y: mouseY };
-    addPoints([mousePosition]);
-    lastDotPlaced = mousePosition;
-  }
+  switch (activeTool) {
+    case 'pencil': {
+      const mousePosition = { x: mouseX, y: mouseY };
+      addPoints([mousePosition]);
+      break;
+    }
+    case 'wand': {
+      if (placeToPlot) {
+        addPoints([placeToPlot]);
+        lastDotPlaced = placeToPlot;
+      } else {
+        const mousePosition = { x: mouseX, y: mouseY };
+        addPoints([mousePosition]);
+        lastDotPlaced = mousePosition;
+      }
 
-  redoList.splice(0, redoList.length); // Clear the redo list
+      redoList.splice(0, redoList.length); // Clear the redo list
+      break;
+    }
+    case 'line': {
+      if (lineSegments.length !== 0) {
+        addPoints(lineSegments);
+        lineSegments.splice(0, lineSegments.length - 1);
+      } else {
+        lineSegments.push({ x: mouseX, y: mouseY });
+      }
+
+      redoList.splice(0, redoList.length); // Clear the redo list
+      break;
+    }
+  }
 
   updateToolbox();
 });
 
-// Release the cursor "lock" when tab is pressed
+function isColliding(newPoint: Point) {
+  if (allPoints.length === 0) return false;
+
+  return Boolean(
+    allPoints.find((point) => {
+      const distance = Math.sqrt(
+        Math.pow(point.x - newPoint.x, 2) + Math.pow(point.y - newPoint.y, 2)
+      );
+
+      return distance < AESTHETIC_DOT_DISTANCE;
+    })
+  );
+}
+
+canvas.addEventListener('mousemove', (event: MouseEvent) => {
+  if (isPlaying) return;
+
+  switch (activeTool) {
+    case 'pencil': {
+      if (event.buttons === 1) {
+        const mousePosition = { x: mouseX, y: mouseY };
+        if (isColliding(mousePosition)) return;
+        addPoints([mousePosition]);
+      }
+      break;
+    }
+  }
+});
+
+// Release the cursor "lock" when R is pressed
 function releaseCursor() {
-  lastDotPlaced = null;
+  switch (activeTool) {
+    case 'wand': {
+      lastDotPlaced = null;
+      return;
+    }
+    case 'line': {
+      lineSegments = [];
+      return;
+    }
+  }
 }
 
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (!isPlaying && lastDotPlaced && event.key === 'r') releaseCursor();
+  if (!isPlaying && event.key === 'r') releaseCursor();
 });
 
 // Undo/Redo buttons
@@ -414,6 +521,7 @@ circleButton.addEventListener('click', () => changeTool('circle'));
 // Clear canvas button
 function clearCanvas() {
   allPoints.splice(0, allPoints.length);
+  redoList.splice(0, redoList.length);
   releaseCursor();
   updateToolbox();
 }
