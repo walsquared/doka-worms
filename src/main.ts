@@ -24,7 +24,9 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
   mouseY = event.y - canvasY;
 });
 
-let isEditing = false;
+let isPlaying = true;
+type Tool = 'pencil' | 'wand' | 'line' | 'square' | 'circle';
+let activeTool: Tool = 'wand';
 
 const WAVE_SPEED = 5;
 const DOT_SIZE = 30;
@@ -145,7 +147,7 @@ function drawSquiggle(startX: number, startY: number) {
 
   // Time since start of animation, multiplied by a factor to make it configurable
   const now = new Date();
-  const animationPosition = isEditing
+  const animationPosition = !isPlaying
     ? 0
     : ((now.getTime() - startOfTimeline.getTime()) / 100) * WAVE_SPEED;
 
@@ -183,7 +185,7 @@ function draw() {
   // EDITOR
   // ------------------------------
 
-  if (isEditing) {
+  if (!isPlaying) {
     context.beginPath();
     context.strokeStyle = 'white';
 
@@ -253,33 +255,55 @@ draw();
 // Editor
 // ------------------------------
 
+const playbackButton = document.getElementById('playback-toggle')!;
+const pencilButton = document.getElementById('pencil-button')!;
+const wandButton = document.getElementById('wand-button')!;
+const lineButton = document.getElementById('line-button')!;
+const squareButton = document.getElementById('square-button')!;
+const circleButton = document.getElementById('circle-button')!;
 const undoButton = document.getElementById('undo-button')!;
 const redoButton = document.getElementById('redo-button')!;
 const clearCanvasButton = document.getElementById('clear-canvas')!;
 
-function updateEditOnlyButtons() {
-  if (!isEditing || allPoints.length === 0) {
+function updateToolbox() {
+  if (isPlaying) {
+    Array.prototype.forEach.call(
+      document.getElementsByClassName('disabled-during-playback'),
+      (element: HTMLElement) => {
+        element.setAttribute('disabled', 'true');
+      }
+    );
+
+    (playbackButton.children[0] as HTMLImageElement).src = './icons/pause.svg';
+    playbackButton.classList.add('active');
+  } else {
+    Array.prototype.forEach.call(
+      document.getElementsByClassName('disabled-during-playback'),
+      (element: HTMLElement) => {
+        element.removeAttribute('disabled');
+      }
+    );
+
+    (playbackButton.children[0] as HTMLImageElement).src = './icons/play.svg';
+    playbackButton.classList.remove('active');
+  }
+
+  if (isPlaying || allPoints.length === 0) {
     undoButton.setAttribute('disabled', 'true');
   } else {
     undoButton.removeAttribute('disabled');
   }
 
-  if (!isEditing || redoList.length === 0) {
+  if (isPlaying || redoList.length === 0) {
     redoButton.setAttribute('disabled', 'true');
   } else {
     redoButton.removeAttribute('disabled');
   }
-
-  if (!isEditing) {
-    clearCanvasButton.setAttribute('disabled', 'true');
-  } else {
-    clearCanvasButton.removeAttribute('disabled');
-  }
 }
-updateEditOnlyButtons();
+updateToolbox();
 
 canvas.addEventListener('click', () => {
-  if (!isEditing) return;
+  if (isPlaying) return;
 
   if (placeToPlot) {
     addPoints([placeToPlot]);
@@ -292,7 +316,7 @@ canvas.addEventListener('click', () => {
 
   redoList.splice(0, redoList.length); // Clear the redo list
 
-  updateEditOnlyButtons();
+  updateToolbox();
 });
 
 // Release the cursor "lock" when tab is pressed
@@ -301,7 +325,7 @@ function releaseCursor() {
 }
 
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (isEditing && lastDotPlaced && event.key === 'r') releaseCursor();
+  if (!isPlaying && lastDotPlaced && event.key === 'r') releaseCursor();
 });
 
 // Undo/Redo buttons
@@ -321,7 +345,7 @@ function undo() {
     )!;
   }
 
-  updateEditOnlyButtons();
+  updateToolbox();
 }
 
 undoButton.addEventListener('click', undo);
@@ -338,7 +362,7 @@ function redo() {
 
   lastDotPlaced = pointToAdd;
 
-  updateEditOnlyButtons();
+  updateToolbox();
 }
 
 redoButton.addEventListener('click', redo);
@@ -348,21 +372,11 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
 });
 
 // Playback button
-const playbackButton = document.getElementById('playback-toggle')!;
-
 function togglePlayback() {
-  isEditing = !isEditing;
+  isPlaying = !isPlaying;
+  if (isPlaying) startOfTimeline = new Date();
 
-  if (isEditing) {
-    (playbackButton.children[0] as HTMLImageElement).src = './icons/play.svg';
-    playbackButton.classList.add('active');
-  } else {
-    startOfTimeline = new Date();
-    (playbackButton.children[0] as HTMLImageElement).src = './icons/pause.svg';
-    playbackButton.classList.remove('active');
-  }
-
-  updateEditOnlyButtons();
+  updateToolbox();
 }
 
 window.addEventListener(
@@ -371,10 +385,36 @@ window.addEventListener(
 );
 playbackButton.addEventListener('click', togglePlayback);
 
+// "Mode" buttons
+function changeTool(tool: Tool) {
+  const oldTool = document.getElementById(`${activeTool}-button`)!;
+  oldTool.classList.remove('active');
+
+  const oldToolIcon = oldTool.children[0] as HTMLImageElement;
+  oldToolIcon.src = oldToolIcon.src.replace('-active.svg', '.svg');
+
+  activeTool = tool;
+
+  const newTool = document.getElementById(`${activeTool}-button`)!;
+  newTool.classList.add('active');
+
+  const newToolIcon = newTool.children[0] as HTMLImageElement;
+  newToolIcon.src = newToolIcon.src.replace('.svg', '-active.svg');
+}
+
+// Make the default tool active
+changeTool(activeTool);
+
+pencilButton.addEventListener('click', () => changeTool('pencil'));
+wandButton.addEventListener('click', () => changeTool('wand'));
+lineButton.addEventListener('click', () => changeTool('line'));
+squareButton.addEventListener('click', () => changeTool('square'));
+circleButton.addEventListener('click', () => changeTool('circle'));
+
 // Clear canvas button
 function clearCanvas() {
   allPoints.splice(0, allPoints.length);
   releaseCursor();
-  updateEditOnlyButtons();
+  updateToolbox();
 }
 clearCanvasButton.addEventListener('click', clearCanvas);
