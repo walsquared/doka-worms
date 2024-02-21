@@ -5,6 +5,8 @@ import makeCircle from './shapes/circle';
 import makeLine from './shapes/line';
 import { Point } from './types';
 
+type PointWithOrder = Point & { index: number };
+
 const canvas = document.getElementById('main-canvas')! as HTMLCanvasElement;
 const context = canvas.getContext('2d')!;
 
@@ -30,7 +32,8 @@ const WORM_LENGTH = 300;
 
 let startOfTimeline = new Date();
 
-const allPoints: Point[] = [];
+const allPoints: PointWithOrder[] = [];
+const redoList: Point[] = [];
 
 /**
  * A function to be passed to Array.sort().
@@ -42,7 +45,13 @@ function orderPoints(pointA: Point, pointB: Point): number {
 }
 
 function addPoints(points: Point[]) {
-  allPoints.push(...points);
+  const startingIndex = allPoints.length;
+  allPoints.push(
+    ...points.map((point, index) => ({
+      ...point,
+      index: startingIndex + index,
+    }))
+  );
   allPoints.sort(orderPoints);
 }
 
@@ -264,16 +273,80 @@ canvas.addEventListener('click', () => {
     addPoints([mousePosition]);
     lastDotPlaced = mousePosition;
   }
+
+  redoList.splice(0, redoList.length); // Clear the redo list
+
+  updateUndoRedoButtons();
 });
 
 // Release the cursor "lock" when tab is pressed
 function releaseCursor() {
   lastDotPlaced = null;
 }
+
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (isEditing && lastDotPlaced && event.key === 'Tab') {
-    releaseCursor();
+  if (isEditing && lastDotPlaced && event.key === 'r') releaseCursor();
+});
+
+// Undo/Redo buttons
+const undoButton = document.getElementById('undo-button')!;
+const redoButton = document.getElementById('redo-button')!;
+
+function updateUndoRedoButtons() {
+  if (!isEditing || allPoints.length === 0) {
+    undoButton.setAttribute('disabled', 'true');
+  } else {
+    undoButton.removeAttribute('disabled');
   }
+
+  if (!isEditing || redoList.length === 0) {
+    redoButton.setAttribute('disabled', 'true');
+  } else {
+    redoButton.removeAttribute('disabled');
+  }
+}
+updateUndoRedoButtons();
+
+function undo() {
+  if (allPoints.length === 0) return;
+
+  const pointToRemove = allPoints.findIndex(
+    ({ index }) => index === allPoints.length - 1
+  );
+  redoList.push(allPoints.splice(pointToRemove, 1)[0]);
+
+  if (allPoints.length === 0) releaseCursor();
+  else if (placeToPlot) {
+    // Move the cursor lock to the previously placed point
+    lastDotPlaced = allPoints.find(
+      ({ index }) => index === allPoints.length - 1
+    )!;
+  }
+
+  updateUndoRedoButtons();
+}
+
+undoButton.addEventListener('click', undo);
+window.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'z' && (event.ctrlKey || event.metaKey) && !event.shiftKey)
+    undo();
+});
+
+function redo() {
+  if (redoList.length === 0) return;
+
+  const pointToAdd = redoList.pop()!;
+  addPoints([pointToAdd]);
+
+  lastDotPlaced = pointToAdd;
+
+  updateUndoRedoButtons();
+}
+
+redoButton.addEventListener('click', redo);
+window.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'z' && (event.ctrlKey || event.metaKey) && event.shiftKey)
+    redo();
 });
 
 // Playback button
@@ -299,7 +372,8 @@ window.addEventListener(
 playbackButton.addEventListener('click', togglePlayback);
 
 // Clear canvas button
-document.getElementById('clear-canvas')!.addEventListener('click', () => {
+function clearCanvas() {
   allPoints.splice(0, allPoints.length);
   releaseCursor();
-});
+}
+document.getElementById('clear-canvas')!.addEventListener('click', clearCanvas);

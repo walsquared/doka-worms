@@ -67,21 +67,27 @@ body {
   place-items: center;
   padding: 6px;
 
-  &:hover {
+  &:not(&:disabled):hover {
     background-color: rgb(50, 50, 50);
+  }
+
+  &:disabled {
+    & img {
+      opacity: 0.5;
+    }
   }
 
   &.active {
     background-color: white;
     color: black;
 
-    &:hover {
+    &:not(&:disabled):hover {
       background-color: rgb(225, 225, 225);
     }
   }
 
   &.destructive {
-    &:hover {
+    &:not(&:disabled):hover {
       background-color: red;
     }
   }
