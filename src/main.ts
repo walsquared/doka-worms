@@ -14,12 +14,15 @@ const context = canvas.getContext('2d')!;
 let mouseX = 0;
 let mouseY = 0;
 
-// Wand tool variables
+// Pencil Tool variables
+let lastDraggedPoint: Point | null = null;
+
+// Wand Tool variables
 let lastDotPlaced: Point | null = null;
 let placeToPlot: Point = { x: mouseX, y: mouseY };
 
 // Line Tool variables
-let lineSegments: Point[] = [];
+let placesToPlot: Point[] = [];
 
 const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
 
@@ -29,8 +32,8 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
 });
 
 let isPlaying = true;
-type Tool = 'pencil' | 'wand' | 'line' | 'square' | 'circle';
-let activeTool: Tool = 'wand';
+type Tool = 'pencil' | 'wand' | 'line';
+let activeTool: Tool = 'pencil';
 
 const WAVE_SPEED = 5;
 const DOT_SIZE = 30;
@@ -203,9 +206,12 @@ function draw() {
 
   if (!isPlaying) {
     switch (activeTool) {
+      case 'pencil': {
+        drawTelegraphy([{ x: mouseX, y: mouseY }]);
+        break;
+      }
       case 'wand': {
         if (lastDotPlaced) {
-          // Find from the last point to the mouse
           const theta = Math.atan2(
             mouseY - lastDotPlaced.y,
             mouseX - lastDotPlaced.x
@@ -222,38 +228,14 @@ function draw() {
           };
         }
 
-        // Draw the cursor
         drawTelegraphy([placeToPlot]);
         break;
       }
       case 'line': {
-        if (lineSegments.length !== 0) {
-          lineSegments.splice(1, lineSegments.length - 1);
-          const calcRemainingDistanceToCursor = () => {
-            const lastSegment = lineSegments[lineSegments.length - 1];
-
-            return Math.sqrt(
-              Math.pow(lastSegment.x - mouseX, 2) +
-                Math.pow(lastSegment.y - mouseY, 2)
-            );
-          };
-
-          while (calcRemainingDistanceToCursor() > AESTHETIC_DOT_DISTANCE) {
-            const lastSegment = lineSegments[lineSegments.length - 1];
-            const theta = Math.atan2(
-              mouseY - lastSegment.y,
-              mouseX - lastSegment.x
-            );
-
-            lineSegments.push({
-              x: lastSegment.x + Math.cos(theta) * AESTHETIC_DOT_DISTANCE,
-              y: lastSegment.y + Math.sin(theta) * AESTHETIC_DOT_DISTANCE,
-            });
-          }
-
-          drawTelegraphy(lineSegments);
+        if (placesToPlot.length !== 0) {
+          placesToPlot = interpolatePointsToCursor(placesToPlot[0]);
+          drawTelegraphy(placesToPlot);
         } else {
-          // Draw free cursor
           drawTelegraphy([{ x: mouseX, y: mouseY }]);
         }
         break;
@@ -307,8 +289,6 @@ const playbackButton = document.getElementById('playback-toggle')!;
 const pencilButton = document.getElementById('pencil-button')!;
 const wandButton = document.getElementById('wand-button')!;
 const lineButton = document.getElementById('line-button')!;
-const squareButton = document.getElementById('square-button')!;
-const circleButton = document.getElementById('circle-button')!;
 const undoButton = document.getElementById('undo-button')!;
 const redoButton = document.getElementById('redo-button')!;
 const clearCanvasButton = document.getElementById('clear-canvas')!;
@@ -355,6 +335,7 @@ canvas.addEventListener('mousedown', () => {
 
   switch (activeTool) {
     case 'pencil': {
+      lastDraggedPoint = null;
       const mousePosition = { x: mouseX, y: mouseY };
       addPoints([mousePosition]);
       break;
@@ -373,11 +354,11 @@ canvas.addEventListener('mousedown', () => {
       break;
     }
     case 'line': {
-      if (lineSegments.length !== 0) {
-        addPoints(lineSegments);
-        lineSegments.splice(0, lineSegments.length - 1);
+      if (placesToPlot.length !== 0) {
+        addPoints(placesToPlot);
+        placesToPlot.splice(0, placesToPlot.length - 1);
       } else {
-        lineSegments.push({ x: mouseX, y: mouseY });
+        placesToPlot.push({ x: mouseX, y: mouseY });
       }
 
       redoList.splice(0, redoList.length); // Clear the redo list
@@ -388,18 +369,27 @@ canvas.addEventListener('mousedown', () => {
   updateToolbox();
 });
 
-function isColliding(newPoint: Point) {
-  if (allPoints.length === 0) return false;
+function interpolatePointsToCursor(startingPoint: Point) {
+  const segments = [startingPoint];
+  const calcRemainingDistanceToCursor = () => {
+    const lastSegment = segments[segments.length - 1];
 
-  return Boolean(
-    allPoints.find((point) => {
-      const distance = Math.sqrt(
-        Math.pow(point.x - newPoint.x, 2) + Math.pow(point.y - newPoint.y, 2)
-      );
+    return Math.sqrt(
+      Math.pow(lastSegment.x - mouseX, 2) + Math.pow(lastSegment.y - mouseY, 2)
+    );
+  };
 
-      return distance < AESTHETIC_DOT_DISTANCE;
-    })
-  );
+  while (calcRemainingDistanceToCursor() > AESTHETIC_DOT_DISTANCE) {
+    const lastSegment = segments[segments.length - 1];
+    const theta = Math.atan2(mouseY - lastSegment.y, mouseX - lastSegment.x);
+
+    segments.push({
+      x: lastSegment.x + Math.cos(theta) * AESTHETIC_DOT_DISTANCE,
+      y: lastSegment.y + Math.sin(theta) * AESTHETIC_DOT_DISTANCE,
+    });
+  }
+
+  return segments;
 }
 
 canvas.addEventListener('mousemove', (event: MouseEvent) => {
@@ -409,8 +399,16 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
     case 'pencil': {
       if (event.buttons === 1) {
         const mousePosition = { x: mouseX, y: mouseY };
-        if (isColliding(mousePosition)) return;
-        addPoints([mousePosition]);
+
+        if (!lastDraggedPoint) {
+          addPoints([mousePosition]);
+          lastDraggedPoint = mousePosition;
+          return;
+        }
+        const missingPoints = interpolatePointsToCursor(lastDraggedPoint);
+
+        addPoints(missingPoints);
+        lastDraggedPoint = missingPoints[missingPoints.length - 1];
       }
       break;
     }
@@ -425,7 +423,7 @@ function releaseCursor() {
       return;
     }
     case 'line': {
-      lineSegments = [];
+      placesToPlot = [];
       return;
     }
   }
@@ -456,10 +454,6 @@ function undo() {
 }
 
 undoButton.addEventListener('click', undo);
-window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.key === 'z' && (event.ctrlKey || event.metaKey) && !event.shiftKey)
-    undo();
-});
 
 function redo() {
   if (redoList.length === 0) return;
@@ -473,9 +467,12 @@ function redo() {
 }
 
 redoButton.addEventListener('click', redo);
+
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.key === 'z' && (event.ctrlKey || event.metaKey) && event.shiftKey)
-    redo();
+  if (event.key === 'z' && (event.ctrlKey || event.metaKey)) {
+    if (event.shiftKey) redo();
+    else undo();
+  }
 });
 
 // Playback button
@@ -515,8 +512,6 @@ changeTool(activeTool);
 pencilButton.addEventListener('click', () => changeTool('pencil'));
 wandButton.addEventListener('click', () => changeTool('wand'));
 lineButton.addEventListener('click', () => changeTool('line'));
-squareButton.addEventListener('click', () => changeTool('square'));
-circleButton.addEventListener('click', () => changeTool('circle'));
 
 // Clear canvas button
 function clearCanvas() {
