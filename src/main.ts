@@ -476,12 +476,26 @@ function undo() {
   );
   redoList.push(allPoints.splice(pointToRemove, 1)[0]);
 
-  if (allPoints.length === 0) releaseCursor();
-  else if (placeToPlot) {
-    // Move the cursor lock to the previously placed point
-    lastDotPlaced = allPoints.find(
-      ({ index }) => index === allPoints.length - 1
-    )!;
+  const lastPoint = allPoints.find(
+    ({ index }) => index === allPoints.length - 1
+  )!;
+
+  switch (activeTool) {
+    case 'wand': {
+      if (placeToPlot) {
+        lastDotPlaced = lastPoint;
+      }
+      break;
+    }
+    case 'line': {
+      if (placesToPlot.length !== 0) {
+        placesToPlot = [lastPoint];
+      }
+      break;
+    }
+    default: {
+      releaseCursor();
+    }
   }
 
   updateToolbox();
@@ -495,7 +509,20 @@ function redo() {
   const pointToAdd = redoList.pop()!;
   addPoints([pointToAdd]);
 
-  lastDotPlaced = pointToAdd;
+  switch (activeTool) {
+    case 'wand': {
+      if (placeToPlot) {
+        lastDotPlaced = pointToAdd;
+      }
+      break;
+    }
+    case 'line': {
+      if (placesToPlot.length !== 0) {
+        placesToPlot = [pointToAdd];
+      }
+      break;
+    }
+  }
 
   updateToolbox();
 }
