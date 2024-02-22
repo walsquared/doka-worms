@@ -57,6 +57,8 @@ function orderPoints(pointA: Point, pointB: Point): number {
 }
 
 function addPoints(points: Point[]) {
+  if (points.length === 0) return;
+
   const startingIndex = allPoints.length;
   allPoints.push(
     ...points.map((point, index) => ({
@@ -335,8 +337,8 @@ canvas.addEventListener('mousedown', () => {
 
   switch (activeTool) {
     case 'pencil': {
-      lastDraggedPoint = null;
       const mousePosition = { x: mouseX, y: mouseY };
+      lastDraggedPoint = mousePosition;
       addPoints([mousePosition]);
       break;
     }
@@ -400,15 +402,18 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
       if (event.buttons === 1) {
         const mousePosition = { x: mouseX, y: mouseY };
 
-        if (!lastDraggedPoint) {
+        if (lastDraggedPoint === null) {
           addPoints([mousePosition]);
           lastDraggedPoint = mousePosition;
-          return;
-        }
-        const missingPoints = interpolatePointsToCursor(lastDraggedPoint);
+        } else {
+          const missingPoints =
+            interpolatePointsToCursor(lastDraggedPoint).slice(1);
 
-        addPoints(missingPoints);
-        lastDraggedPoint = missingPoints[missingPoints.length - 1];
+          if (missingPoints.length > 0) {
+            addPoints(missingPoints);
+            lastDraggedPoint = missingPoints[missingPoints.length - 1];
+          }
+        }
       }
       break;
     }
