@@ -1,11 +1,11 @@
 @font-face {
   font-family: CooperHewitt;
-  src: url('../fonts/CooperHewitt-Heavy.otf');
+  src: url('../fonts/CooperHewitt-Heavy.otf') format('opentype');
 }
 
 @font-face {
   font-family: OfficeCodePro;
-  src: url('../fonts/OfficeCodePro-Light.otf');
+  src: url('../fonts/OfficeCodePro-Regular.otf') format('opentype');
 }
 
 body {
@@ -40,10 +40,15 @@ body {
   }
 }
 
-.toolbox {
+#toolbox {
   display: flex;
   place-items: center;
   gap: 12px;
+}
+
+#toolbox.hidden,
+#start-button.hidden {
+  display: none;
 }
 
 .toolbox-section {
@@ -65,7 +70,28 @@ body {
   background: none;
   /* reset over */
 
-  border-color: white;
+  background-color: white;
+  color: black;
+
+  padding: 6px 12px;
+  font-size: 1em;
+  line-height: 1.75;
+
+  font-family: OfficeCodePro, monospace;
+  text-transform: uppercase;
+
+  &:hover {
+    background-color: rgb(225, 225, 225);
+  }
+}
+
+.toolbox-icon-button {
+  /* button reset */
+  border: none;
+  padding: 0;
+  background: none;
+  /* reset over */
+
   background-color: black;
 
   display: flex;

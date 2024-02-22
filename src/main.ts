@@ -24,9 +24,8 @@ const context = canvas.getContext('2d')!;
 let mouseX = 0;
 let mouseY = 0;
 
-const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
-
 canvas.addEventListener('mousemove', (event: MouseEvent) => {
+  const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
   mouseX = event.x - canvasX;
   mouseY = event.y - canvasY;
 });
@@ -348,6 +347,16 @@ draw();
 // ------------------------------
 // Editor
 // ------------------------------
+const startButton = document.getElementById('start-button')!;
+const toolbox = document.getElementById('toolbox')!;
+
+startButton.addEventListener('click', () => {
+  toolbox.classList.remove('hidden');
+  startButton.classList.add('hidden');
+  isPlaying = false;
+  deriveAllPointsFromHistory();
+  updateToolbox();
+});
 
 const playbackButton = document.getElementById('playback-toggle')!;
 const pencilButton = document.getElementById('pencil-button')!;
