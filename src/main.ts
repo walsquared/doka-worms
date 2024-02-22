@@ -24,6 +24,9 @@ let placeToPlot: Point = { x: mouseX, y: mouseY };
 
 // Line Tool variables
 let placesToPlot: Point[] = [];
+let isSnapping = false;
+let lineToSnapTo: 'x-axis' | 'y-axis' | 'p-diagonal' | 'n-diagonal' | 'none' =
+  'none';
 
 const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
 
@@ -361,7 +364,7 @@ canvas.addEventListener('mousedown', () => {
     case 'line': {
       if (placesToPlot.length !== 0) {
         addPoints(placesToPlot);
-        placesToPlot.splice(0, placesToPlot.length - 1);
+        placesToPlot = [placesToPlot[placesToPlot.length - 1]];
       } else {
         placesToPlot.push({ x: mouseX, y: mouseY });
         addPoints(placesToPlot);
@@ -380,22 +383,84 @@ function interpolatePointsToCursor(startingPoint: Point) {
   const calcRemainingDistanceToCursor = () => {
     const lastSegment = segments[segments.length - 1];
 
-    return Math.sqrt(
-      Math.pow(lastSegment.x - mouseX, 2) + Math.pow(lastSegment.y - mouseY, 2)
-    );
+    switch (lineToSnapTo) {
+      case 'none': {
+        return Math.sqrt(
+          Math.pow(mouseX - lastSegment.x, 2) +
+            Math.pow(mouseY - lastSegment.y, 2)
+        );
+      }
+      case 'x-axis': {
+        return Math.abs(mouseX - lastSegment.x);
+      }
+      case 'y-axis': {
+        return Math.abs(mouseY - lastSegment.y);
+      }
+      case 'p-diagonal':
+      case 'n-diagonal': {
+        const rise = mouseY - lastSegment.y;
+        const run = mouseX - lastSegment.x;
+        const shortestSide = Math.min(Math.abs(rise), Math.abs(run));
+        return Math.sqrt(Math.pow(shortestSide, 2) + Math.pow(shortestSide, 2));
+      }
+    }
   };
 
-  while (calcRemainingDistanceToCursor() > AESTHETIC_DOT_DISTANCE) {
+  while (calcRemainingDistanceToCursor() >= AESTHETIC_DOT_DISTANCE) {
     const lastSegment = segments[segments.length - 1];
     const theta = Math.atan2(mouseY - lastSegment.y, mouseX - lastSegment.x);
 
-    segments.push({
-      x: lastSegment.x + Math.cos(theta) * AESTHETIC_DOT_DISTANCE,
-      y: lastSegment.y + Math.sin(theta) * AESTHETIC_DOT_DISTANCE,
-    });
+    switch (lineToSnapTo) {
+      case 'none': {
+        segments.push({
+          x: lastSegment.x + Math.cos(theta) * AESTHETIC_DOT_DISTANCE,
+          y: lastSegment.y + Math.sin(theta) * AESTHETIC_DOT_DISTANCE,
+        });
+        break;
+      }
+      case 'x-axis': {
+        const direction =
+          theta < (1 / 2) * Math.PI && theta > (-1 / 2) * Math.PI ? 1 : -1;
+        segments.push({
+          x: lastSegment.x + AESTHETIC_DOT_DISTANCE * direction,
+          y: lastSegment.y,
+        });
+        break;
+      }
+      case 'y-axis': {
+        const direction = theta > 0 ? 1 : -1;
+        segments.push({
+          x: lastSegment.x,
+          y: lastSegment.y + AESTHETIC_DOT_DISTANCE * direction,
+        });
+        break;
+      }
+      case 'p-diagonal': {
+        const roundedTheta =
+          theta > (-1 / 4) * Math.PI && theta < (3 / 4) * Math.PI
+            ? (1 / 4) * Math.PI
+            : (-3 / 4) * Math.PI;
+        segments.push({
+          x: lastSegment.x + Math.cos(roundedTheta) * AESTHETIC_DOT_DISTANCE,
+          y: lastSegment.y + Math.sin(roundedTheta) * AESTHETIC_DOT_DISTANCE,
+        });
+        break;
+      }
+      case 'n-diagonal': {
+        const roundedTheta =
+          theta < (1 / 4) * Math.PI && theta > (-3 / 4) * Math.PI
+            ? (-1 / 4) * Math.PI
+            : (3 / 4) * Math.PI;
+        segments.push({
+          x: lastSegment.x + Math.cos(roundedTheta) * AESTHETIC_DOT_DISTANCE,
+          y: lastSegment.y + Math.sin(roundedTheta) * AESTHETIC_DOT_DISTANCE,
+        });
+        break;
+      }
+    }
   }
 
-  return segments;
+  return Array.from(segments);
 }
 
 canvas.addEventListener('mousemove', (event: MouseEvent) => {
@@ -403,40 +468,81 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
 
   switch (activeTool) {
     case 'pencil': {
-      if (event.buttons === 1) {
-        const mousePosition = { x: mouseX, y: mouseY };
+      if (event.buttons !== 1) return;
 
-        if (lastDraggedPoint === null) {
-          addPoints([mousePosition]);
-          lastDraggedPoint = mousePosition;
-        } else {
-          const missingPoints =
-            interpolatePointsToCursor(lastDraggedPoint).slice(1);
+      const mousePosition = { x: mouseX, y: mouseY };
 
-          if (missingPoints.length > 0) {
-            addPoints(missingPoints);
-            lastDraggedPoint = missingPoints[missingPoints.length - 1];
-          }
-        }
+      if (lastDraggedPoint === null) {
+        addPoints([mousePosition]);
+        lastDraggedPoint = mousePosition;
+      } else {
+        const missingPoints =
+          interpolatePointsToCursor(lastDraggedPoint).slice(1);
+
+        if (missingPoints.length === 0) return;
+
+        addPoints(missingPoints);
+        lastDraggedPoint = missingPoints[missingPoints.length - 1];
       }
-      break;
+
+      return;
     }
     case 'wand': {
-      if (event.buttons === 1 && lastClickPosition && lastDotPlaced) {
-        const distanceTraveledFromLastClick = Math.sqrt(
-          Math.pow(mouseX - lastClickPosition.x, 2) +
-            Math.pow(mouseY - lastClickPosition.y, 2)
-        );
+      if (event.buttons !== 1 || !lastClickPosition || !lastDotPlaced) return;
 
-        if (distanceTraveledFromLastClick > AESTHETIC_DOT_DISTANCE) {
-          addPoints([placeToPlot]);
-          lastDotPlaced = placeToPlot;
-          lastClickPosition = { x: mouseX, y: mouseY };
-        }
+      const distanceTraveledFromLastClick = Math.sqrt(
+        Math.pow(mouseX - lastClickPosition.x, 2) +
+          Math.pow(mouseY - lastClickPosition.y, 2)
+      );
+
+      if (distanceTraveledFromLastClick <= AESTHETIC_DOT_DISTANCE) return;
+
+      addPoints([placeToPlot]);
+      lastDotPlaced = placeToPlot;
+      lastClickPosition = { x: mouseX, y: mouseY };
+
+      return;
+    }
+    case 'line': {
+      if (placesToPlot.length === 0) return;
+      if (!isSnapping) {
+        lineToSnapTo = 'none';
+        return;
       }
+      const rise = mouseY - placesToPlot[0].y;
+      const run = mouseX - placesToPlot[0].x;
+      const slope =
+        run === 0
+          ? rise > 0
+            ? Infinity
+            : rise < 0
+            ? -Infinity
+            : 0
+          : rise / run;
+
+      if (slope >= -0.5 && slope <= 0.5) lineToSnapTo = 'x-axis';
+      else if (slope >= 2 || slope <= -2) lineToSnapTo = 'y-axis';
+      else if (slope > 0) lineToSnapTo = 'p-diagonal';
+      else lineToSnapTo = 'n-diagonal';
+
+      return;
     }
   }
 });
+
+// Playback button
+function togglePlayback() {
+  isPlaying = !isPlaying;
+  if (isPlaying) startOfTimeline = new Date();
+
+  updateToolbox();
+}
+
+window.addEventListener(
+  'keydown',
+  (event: KeyboardEvent) => event.key === ' ' && togglePlayback()
+);
+playbackButton.addEventListener('click', togglePlayback);
 
 // Release the cursor "lock" when R is pressed
 function releaseCursor() {
@@ -452,18 +558,16 @@ function releaseCursor() {
   }
 }
 
+// Line tool
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (!isPlaying) {
-    switch (event.key) {
-      case 'r':
-        return releaseCursor();
-      case '1':
-        return changeTool('pencil');
-      case '2':
-        return changeTool('wand');
-      case '3':
-        return changeTool('line');
-    }
+  if (event.key === 'Shift') {
+    isSnapping = true;
+  }
+});
+
+window.addEventListener('keyup', (event: KeyboardEvent) => {
+  if (event.key === 'Shift') {
+    isSnapping = false;
   }
 });
 
@@ -536,21 +640,7 @@ window.addEventListener('keydown', (event: KeyboardEvent) => {
   }
 });
 
-// Playback button
-function togglePlayback() {
-  isPlaying = !isPlaying;
-  if (isPlaying) startOfTimeline = new Date();
-
-  updateToolbox();
-}
-
-window.addEventListener(
-  'keydown',
-  (event: KeyboardEvent) => event.key === ' ' && togglePlayback()
-);
-playbackButton.addEventListener('click', togglePlayback);
-
-// "Mode" buttons
+// Tool buttons
 function changeTool(tool: Tool) {
   releaseCursor();
 
@@ -571,6 +661,19 @@ function changeTool(tool: Tool) {
 
 // Make the default tool active
 changeTool(activeTool);
+
+window.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (!isPlaying) {
+    switch (event.key) {
+      case '1':
+        return changeTool('pencil');
+      case '2':
+        return changeTool('wand');
+      case '3':
+        return changeTool('line');
+    }
+  }
+});
 
 pencilButton.addEventListener('click', () => changeTool('pencil'));
 wandButton.addEventListener('click', () => changeTool('wand'));
