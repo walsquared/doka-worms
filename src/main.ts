@@ -19,6 +19,7 @@ let lastDraggedPoint: Point | null = null;
 
 // Wand Tool variables
 let lastDotPlaced: Point | null = null;
+let lastClickPosition: Point | null = null;
 let placeToPlot: Point = { x: mouseX, y: mouseY };
 
 // Line Tool variables
@@ -343,6 +344,8 @@ canvas.addEventListener('mousedown', () => {
       break;
     }
     case 'wand': {
+      lastClickPosition = { x: mouseX, y: mouseY };
+
       if (placeToPlot) {
         addPoints([placeToPlot]);
         lastDotPlaced = placeToPlot;
@@ -417,6 +420,20 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
         }
       }
       break;
+    }
+    case 'wand': {
+      if (event.buttons === 1 && lastClickPosition && lastDotPlaced) {
+        const distanceTraveledFromLastClick = Math.sqrt(
+          Math.pow(mouseX - lastClickPosition.x, 2) +
+            Math.pow(mouseY - lastClickPosition.y, 2)
+        );
+
+        if (distanceTraveledFromLastClick > AESTHETIC_DOT_DISTANCE) {
+          addPoints([placeToPlot]);
+          lastDotPlaced = placeToPlot;
+          lastClickPosition = { x: mouseX, y: mouseY };
+        }
+      }
     }
   }
 });
