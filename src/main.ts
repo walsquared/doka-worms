@@ -236,7 +236,7 @@ function draw() {
       case 'line': {
         if (placesToPlot.length !== 0) {
           placesToPlot = interpolatePointsToCursor(placesToPlot[0]);
-          drawTelegraphy(placesToPlot);
+          drawTelegraphy(placesToPlot.slice(1));
         } else {
           drawTelegraphy([{ x: mouseX, y: mouseY }]);
         }
@@ -361,6 +361,7 @@ canvas.addEventListener('mousedown', () => {
         placesToPlot.splice(0, placesToPlot.length - 1);
       } else {
         placesToPlot.push({ x: mouseX, y: mouseY });
+        addPoints(placesToPlot);
       }
 
       redoList.splice(0, redoList.length); // Clear the redo list
