@@ -436,7 +436,18 @@ function releaseCursor() {
 }
 
 window.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (!isPlaying && event.key === 'r') releaseCursor();
+  if (!isPlaying) {
+    switch (event.key) {
+      case 'r':
+        return releaseCursor();
+      case '1':
+        return changeTool('pencil');
+      case '2':
+        return changeTool('wand');
+      case '3':
+        return changeTool('line');
+    }
+  }
 });
 
 // Undo/Redo buttons
@@ -497,6 +508,8 @@ playbackButton.addEventListener('click', togglePlayback);
 
 // "Mode" buttons
 function changeTool(tool: Tool) {
+  releaseCursor();
+
   const oldTool = document.getElementById(`${activeTool}-button`)!;
   oldTool.classList.remove('active');
 
