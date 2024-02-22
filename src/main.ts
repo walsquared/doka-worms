@@ -1,43 +1,15 @@
 // https://www.volkshotel.nl/content/uploads/2023/09/DOKA_SITE_v2.mp4
 // In action: https://www.volkshotel.nl/en/doka
+import { v4 as uuidv4 } from 'uuid';
+
 import makeSquare from './shapes/square';
 import makeCircle from './shapes/circle';
 import makeLine from './shapes/line';
 import { Point } from './types';
 import DokaJson from './doka-word.json';
 
-type PointWithOrder = Point & { index: number };
-
-const canvas = document.getElementById('main-canvas')! as HTMLCanvasElement;
-const context = canvas.getContext('2d')!;
-
-let mouseX = 0;
-let mouseY = 0;
-
-// Pencil Tool variables
-let lastDraggedPoint: Point | null = null;
-
-// Wand Tool variables
-let lastDotPlaced: Point | null = null;
-let lastClickPosition: Point | null = null;
-let placeToPlot: Point = { x: mouseX, y: mouseY };
-
-// Line Tool variables
-let placesToPlot: Point[] = [];
-let isSnapping = false;
-let lineToSnapTo: 'x-axis' | 'y-axis' | 'p-diagonal' | 'n-diagonal' | 'none' =
-  'none';
-
-const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
-
-canvas.addEventListener('mousemove', (event: MouseEvent) => {
-  mouseX = event.x - canvasX;
-  mouseY = event.y - canvasY;
-});
-
-let isPlaying = true;
-type Tool = 'pencil' | 'wand' | 'line';
-let activeTool: Tool = 'pencil';
+type PointWithId = Point & { id: string };
+type OrderedPoint = PointWithId & { index: number };
 
 const WAVE_SPEED = 5;
 const DOT_SIZE = 30;
@@ -46,10 +18,53 @@ const AESTHETIC_DOT_DISTANCE = DOT_SIZE * 0.9;
 const GRADIENT_STOPS = 3;
 const WORM_LENGTH = 300;
 
-let startOfTimeline = new Date();
+const canvas = document.getElementById('main-canvas')! as HTMLCanvasElement;
+const context = canvas.getContext('2d')!;
 
-const allPoints: PointWithOrder[] = [];
-const redoList: Point[] = [];
+let mouseX = 0;
+let mouseY = 0;
+
+const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
+
+canvas.addEventListener('mousemove', (event: MouseEvent) => {
+  mouseX = event.x - canvasX;
+  mouseY = event.y - canvasY;
+});
+
+// Playback state
+let startOfTimeline = new Date();
+let isPlaying = true;
+
+type Tool = 'pencil' | 'wand' | 'line';
+let activeTool: Tool = 'pencil';
+
+// Pencil Tool state
+let lastDraggedPoint: Point | null = null;
+
+// Wand Tool state
+let lastDotPlaced: Point | null = null;
+let lastClickPosition: Point | null = null;
+let placeToPlot: Point = { x: mouseX, y: mouseY };
+
+// Line Tool state
+let placesToPlot: Point[] = [];
+let isSnapping = false;
+let lineToSnapTo: 'x-axis' | 'y-axis' | 'p-diagonal' | 'n-diagonal' | 'none' =
+  'none';
+let firstLineSegment = true;
+
+// History state
+type Batch = {
+  action: 'add' | 'remove';
+  points: PointWithId[];
+};
+const batchedHistory: Array<Batch> = [];
+let allPoints: OrderedPoint[] = DokaJson.map((point, index) => ({
+  ...point,
+  id: uuidv4(),
+  index,
+}));
+const removedBatches: Array<Batch> = [];
 
 /**
  * A function to be passed to Array.sort().
@@ -60,21 +75,64 @@ function orderPoints(pointA: Point, pointB: Point): number {
   return pointA.x === pointB.x ? pointA.y - pointB.y : pointB.x - pointA.x;
 }
 
-function addPoints(points: Point[]) {
-  if (points.length === 0) return;
-
-  const startingIndex = allPoints.length;
-  allPoints.push(
-    ...points.map((point, index) => ({
-      ...point,
-      index: startingIndex + index,
-    }))
-  );
-  allPoints.sort(orderPoints);
+function deriveAllPointsFromHistory() {
+  allPoints = batchedHistory
+    .reduce((acc, batch) => {
+      switch (batch.action) {
+        case 'add': {
+          return acc.concat(batch.points);
+        }
+        case 'remove': {
+          return acc.filter(
+            (point) =>
+              !batch.points.some(
+                (pointToRemove) => pointToRemove.id === point.id
+              )
+          );
+        }
+      }
+    }, new Array<PointWithId>())
+    .map((point, index) => ({ ...point, index }))
+    .sort(orderPoints);
 }
 
-// Add the points from the Doka word
-addPoints(DokaJson);
+function addPoints(pointsToAdd: Point[], newBatch = true) {
+  if (pointsToAdd.length === 0) return;
+
+  if (newBatch || batchedHistory.length === 0) {
+    batchedHistory.push({
+      action: 'add',
+      points: pointsToAdd.map((point) => ({ ...point, id: uuidv4() })),
+    });
+  } else {
+    let latestBatch = batchedHistory.pop()!;
+    batchedHistory.push({
+      action: 'add',
+      points: latestBatch.points.concat(
+        pointsToAdd.map((point) => ({ ...point, id: uuidv4() }))
+      ),
+    });
+  }
+
+  // Limit on length of history
+  if (batchedHistory.length > 25) batchedHistory.shift();
+
+  // Remove any redo history
+  removedBatches.splice(0, removedBatches.length);
+
+  deriveAllPointsFromHistory();
+}
+
+function removePoints(pointsToRemove: PointWithId[]) {
+  if (pointsToRemove.length === 0) return;
+
+  batchedHistory.push({ action: 'remove', points: pointsToRemove });
+
+  // Limit on length of history
+  if (batchedHistory.length > 25) batchedHistory.shift();
+
+  deriveAllPointsFromHistory();
+}
 
 function calcSegYValue(segX: number, animationPos: number): number {
   // As this value increases, the wave becomes taller
@@ -322,13 +380,13 @@ function updateToolbox() {
     playbackButton.classList.remove('active');
   }
 
-  if (isPlaying || allPoints.length === 0) {
+  if (isPlaying || batchedHistory.length === 0) {
     undoButton.setAttribute('disabled', 'true');
   } else {
     undoButton.removeAttribute('disabled');
   }
 
-  if (isPlaying || redoList.length === 0) {
+  if (isPlaying || removedBatches.length === 0) {
     redoButton.setAttribute('disabled', 'true');
   } else {
     redoButton.removeAttribute('disabled');
@@ -358,19 +416,21 @@ canvas.addEventListener('mousedown', () => {
         lastDotPlaced = mousePosition;
       }
 
-      redoList.splice(0, redoList.length); // Clear the redo list
+      removedBatches.splice(0, removedBatches.length); // Clear the redo list
       break;
     }
     case 'line': {
       if (placesToPlot.length !== 0) {
-        addPoints(placesToPlot);
+        addPoints(placesToPlot, !firstLineSegment);
         placesToPlot = [placesToPlot[placesToPlot.length - 1]];
+        firstLineSegment = false;
       } else {
         placesToPlot.push({ x: mouseX, y: mouseY });
         addPoints(placesToPlot);
+        firstLineSegment = true;
       }
 
-      redoList.splice(0, redoList.length); // Clear the redo list
+      removedBatches.splice(0, removedBatches.length); // Clear the redo list
       break;
     }
   }
@@ -481,7 +541,7 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
 
         if (missingPoints.length === 0) return;
 
-        addPoints(missingPoints);
+        addPoints(missingPoints, false);
         lastDraggedPoint = missingPoints[missingPoints.length - 1];
       }
 
@@ -497,7 +557,7 @@ canvas.addEventListener('mousemove', (event: MouseEvent) => {
 
       if (distanceTraveledFromLastClick <= AESTHETIC_DOT_DISTANCE) return;
 
-      addPoints([placeToPlot]);
+      addPoints([placeToPlot], false);
       lastDotPlaced = placeToPlot;
       lastClickPosition = { x: mouseX, y: mouseY };
 
@@ -553,7 +613,35 @@ function releaseCursor() {
     }
     case 'line': {
       placesToPlot = [];
+      firstLineSegment = true;
       return;
+    }
+  }
+}
+
+window.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'r') releaseCursor();
+});
+
+function restoreSoftLock() {
+  const lastPoint = allPoints.find(
+    ({ index }) => index === allPoints.length - 1
+  );
+
+  if (!lastPoint) return releaseCursor();
+
+  switch (activeTool) {
+    case 'wand': {
+      if (!placeToPlot) return releaseCursor();
+
+      lastDotPlaced = lastPoint;
+      break;
+    }
+    case 'line': {
+      if (placesToPlot.length === 0) return releaseCursor();
+
+      placesToPlot = [lastPoint];
+      break;
     }
   }
 }
@@ -573,34 +661,14 @@ window.addEventListener('keyup', (event: KeyboardEvent) => {
 
 // Undo/Redo buttons
 function undo() {
-  if (allPoints.length === 0) return;
+  if (batchedHistory.length === 0) return;
 
-  const pointToRemove = allPoints.findIndex(
-    ({ index }) => index === allPoints.length - 1
-  );
-  redoList.push(allPoints.splice(pointToRemove, 1)[0]);
+  const deletedBatch = batchedHistory.pop()!;
+  removedBatches.push(deletedBatch);
 
-  const lastPoint = allPoints.find(
-    ({ index }) => index === allPoints.length - 1
-  )!;
+  deriveAllPointsFromHistory();
 
-  switch (activeTool) {
-    case 'wand': {
-      if (placeToPlot) {
-        lastDotPlaced = lastPoint;
-      }
-      break;
-    }
-    case 'line': {
-      if (placesToPlot.length !== 0) {
-        placesToPlot = [lastPoint];
-      }
-      break;
-    }
-    default: {
-      releaseCursor();
-    }
-  }
+  restoreSoftLock();
 
   updateToolbox();
 }
@@ -608,25 +676,14 @@ function undo() {
 undoButton.addEventListener('click', undo);
 
 function redo() {
-  if (redoList.length === 0) return;
+  if (removedBatches.length === 0) return;
 
-  const pointToAdd = redoList.pop()!;
-  addPoints([pointToAdd]);
+  const batchToRedo = removedBatches.pop()!;
+  batchedHistory.push(batchToRedo);
 
-  switch (activeTool) {
-    case 'wand': {
-      if (placeToPlot) {
-        lastDotPlaced = pointToAdd;
-      }
-      break;
-    }
-    case 'line': {
-      if (placesToPlot.length !== 0) {
-        placesToPlot = [pointToAdd];
-      }
-      break;
-    }
-  }
+  deriveAllPointsFromHistory();
+
+  restoreSoftLock();
 
   updateToolbox();
 }
@@ -681,8 +738,7 @@ lineButton.addEventListener('click', () => changeTool('line'));
 
 // Clear canvas button
 function clearCanvas() {
-  allPoints.splice(0, allPoints.length);
-  redoList.splice(0, redoList.length);
+  removePoints(allPoints);
   releaseCursor();
   updateToolbox();
 }
