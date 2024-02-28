@@ -11,12 +11,21 @@ import DokaJson from './doka-word.json';
 type PointWithId = Point & { id: string };
 type OrderedPoint = PointWithId & { index: number };
 
-const WAVE_SPEED = 5;
 const DOT_SIZE = 30;
 // This is the distance between the centers of two dots to create pretty overlap
 const AESTHETIC_DOT_DISTANCE = DOT_SIZE * 0.9;
 const GRADIENT_STOPS = 3;
-const WORM_LENGTH = 300;
+
+// I find multiplying the time by 1/20 to be a good speed for the animation
+const TIME_RATIO = 1 / 20;
+
+const NUM_SEGMENTS = 75;
+const SEGMENT_LENGTH = 4;
+// As this value increases, the worm becomes taller
+const AMPLITUDE_MODIFIER = 45;
+// As this value increases, the worm becomes longer
+const FREQUENCY_MODIFIER = 35;
+const PHASE_LENGTH = (2 * Math.PI * FREQUENCY_MODIFIER) / TIME_RATIO;
 
 const canvas = document.getElementById('main-canvas')! as HTMLCanvasElement;
 const context = canvas.getContext('2d')!;
@@ -24,7 +33,7 @@ const context = canvas.getContext('2d')!;
 let mouseX = 0;
 let mouseY = 0;
 
-canvas.addEventListener('mousemove', (event: MouseEvent) => {
+canvas.addEventListener('mousemove', (event) => {
   const { x: canvasX, y: canvasY } = canvas.getBoundingClientRect();
   mouseX = event.x - canvasX;
   mouseY = event.y - canvasY;
@@ -134,14 +143,8 @@ function removePoints(pointsToRemove: PointWithId[]) {
 }
 
 function calcSegYValue(segX: number, animationPos: number): number {
-  // As this value increases, the wave becomes taller
-  const amplitudeModifier = 45;
-
-  // As this value increases, the wave becomes longer
-  const frequencyModifier = 35;
-
   return (
-    amplitudeModifier * Math.sin((segX + animationPos) / frequencyModifier)
+    AMPLITUDE_MODIFIER * Math.sin((segX + animationPos) / FREQUENCY_MODIFIER)
   );
 }
 
@@ -154,7 +157,8 @@ function makeGradient(
   startY: number,
   animationPosition: number
 ): CanvasGradient {
-  const gradientAnimationOffset = Math.sin(animationPosition / 40 + 10) * 100;
+  const gradientAnimationOffset =
+    Math.sin(animationPosition / FREQUENCY_MODIFIER + 10) * 100;
   const gradientXOffset = 3 * (startX / canvas.width - 0.5) * 500;
   const gradientYOffset = 3 * (startY / canvas.height - 0.5) * 100;
 
@@ -214,14 +218,12 @@ function testGradient() {
   context.fill();
 }
 
-function drawSquiggle(startX: number, startY: number) {
+function drawSquiggle(
+  startX: number,
+  startY: number,
+  animationPosition: number
+) {
   context.save();
-
-  // Time since start of animation, multiplied by a factor to make it configurable
-  const now = new Date();
-  const animationPosition = !isPlaying
-    ? 0
-    : ((now.getTime() - startOfTimeline.getTime()) / 100) * WAVE_SPEED;
 
   context.beginPath();
   context.moveTo(startX, startY + calcSegYValue(0, animationPosition));
@@ -229,10 +231,12 @@ function drawSquiggle(startX: number, startY: number) {
   context.lineCap = 'round';
 
   // Draw the squiggle
-  for (let segmentXValue = 0; segmentXValue < WORM_LENGTH; segmentXValue++) {
+  for (let segmentIndex = 0; segmentIndex < NUM_SEGMENTS; segmentIndex++) {
+    const segmentX = segmentIndex * SEGMENT_LENGTH;
     context.lineTo(
-      startX - segmentXValue, // The wave isn't moving left/right, so we don't need to use animationPosition here
-      startY + calcSegYValue(segmentXValue, animationPosition)
+      // The wave isn't moving left/right, so we don't need to use animationPosition for the x value
+      startX - segmentX,
+      startY + calcSegYValue(segmentX, animationPosition)
     );
   }
 
@@ -257,11 +261,19 @@ function drawTelegraphy(points: Point[]) {
 }
 
 function draw() {
+  // Time since start of animation, multiplied by a factor to make it configurable
+  const now = new Date();
+  const animationPosition = !isPlaying
+    ? 0
+    : (now.getTime() - startOfTimeline.getTime()) * TIME_RATIO;
+
   context.clearRect(0, 0, canvas.width, canvas.height);
 
   // testGradient();
 
-  allPoints.forEach((point) => drawSquiggle(point.x, point.y));
+  allPoints.forEach((point) =>
+    drawSquiggle(point.x, point.y, animationPosition)
+  );
 
   // ------------------------------
   // EDITOR
@@ -365,6 +377,7 @@ const lineButton = document.getElementById('line-button')!;
 const undoButton = document.getElementById('undo-button')!;
 const redoButton = document.getElementById('redo-button')!;
 const clearCanvasButton = document.getElementById('clear-canvas')!;
+const exportButton = document.getElementById('export-button')!;
 
 function updateToolbox() {
   if (isPlaying) {
@@ -399,6 +412,12 @@ function updateToolbox() {
     redoButton.setAttribute('disabled', 'true');
   } else {
     redoButton.removeAttribute('disabled');
+  }
+
+  if (allPoints.length === 0) {
+    exportButton.setAttribute('disabled', 'true');
+  } else {
+    exportButton.removeAttribute('disabled');
   }
 }
 updateToolbox();
@@ -532,7 +551,7 @@ function interpolatePointsToCursor(startingPoint: Point) {
   return Array.from(segments);
 }
 
-canvas.addEventListener('mousemove', (event: MouseEvent) => {
+canvas.addEventListener('mousemove', (event) => {
   if (isPlaying) return;
 
   switch (activeTool) {
@@ -609,7 +628,7 @@ function togglePlayback() {
 
 window.addEventListener(
   'keydown',
-  (event: KeyboardEvent) => event.key === ' ' && togglePlayback()
+  (event) => event.key === ' ' && togglePlayback()
 );
 playbackButton.addEventListener('click', togglePlayback);
 
@@ -628,7 +647,7 @@ function releaseCursor() {
   }
 }
 
-window.addEventListener('keydown', (event: KeyboardEvent) => {
+window.addEventListener('keydown', (event) => {
   if (event.key === 'r') releaseCursor();
 });
 
@@ -656,13 +675,13 @@ function restoreSoftLock() {
 }
 
 // Line tool
-window.addEventListener('keydown', (event: KeyboardEvent) => {
+window.addEventListener('keydown', (event) => {
   if (event.key === 'Shift') {
     isSnapping = true;
   }
 });
 
-window.addEventListener('keyup', (event: KeyboardEvent) => {
+window.addEventListener('keyup', (event) => {
   if (event.key === 'Shift') {
     isSnapping = false;
   }
@@ -699,7 +718,7 @@ function redo() {
 
 redoButton.addEventListener('click', redo);
 
-window.addEventListener('keydown', (event: KeyboardEvent) => {
+window.addEventListener('keydown', (event) => {
   if (event.key === 'z' && (event.ctrlKey || event.metaKey)) {
     if (event.shiftKey) redo();
     else undo();
@@ -728,7 +747,7 @@ function changeTool(tool: Tool) {
 // Make the default tool active
 changeTool(activeTool);
 
-window.addEventListener('keydown', (event: KeyboardEvent) => {
+window.addEventListener('keydown', (event) => {
   if (!isPlaying) {
     switch (event.key) {
       case '1':
@@ -752,3 +771,67 @@ function clearCanvas() {
   updateToolbox();
 }
 clearCanvasButton.addEventListener('click', clearCanvas);
+
+// ------------------------------
+// Exporting
+// https://stackoverflow.com/questions/19235286/convert-html5-canvas-sequence-to-a-video-file
+
+const loadingSpinner = document.getElementById('loading-spinner')!;
+const downloadButton = document.getElementById('download-button')!;
+
+function createVideoOfCanvas(time: number): Promise<string> {
+  const recordedChunks: Blob[] = [];
+
+  return new Promise((resolve, reject) => {
+    const stream = canvas.captureStream(30);
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+    mediaRecorder.start(time);
+
+    mediaRecorder.addEventListener('dataavailable', (event) => {
+      if (event.data.size === 0) return;
+      recordedChunks.push(event.data);
+      if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+    });
+
+    mediaRecorder.addEventListener('stop', () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      resolve(url);
+    });
+  });
+}
+
+exportButton.addEventListener('click', async () => {
+  isPlaying = true;
+  startOfTimeline = new Date();
+  exportButton.classList.remove('has-explicit-visibility');
+  loadingSpinner.classList.add('has-explicit-visibility');
+
+  Array.prototype.forEach.call(
+    document.getElementsByClassName('toolbox-item'),
+    (element: HTMLElement) => {
+      element.setAttribute('disabled', 'true');
+    }
+  );
+
+  const url = await createVideoOfCanvas(PHASE_LENGTH);
+
+  Array.prototype.forEach.call(
+    document.getElementsByClassName('toolbox-item'),
+    (element: HTMLElement) => {
+      element.removeAttribute('disabled');
+    }
+  );
+
+  downloadButton.setAttribute('href', url);
+  window.URL.revokeObjectURL(url);
+
+  loadingSpinner.classList.remove('has-explicit-visibility');
+  downloadButton.classList.add('has-explicit-visibility');
+});
+
+downloadButton.addEventListener('click', () => {
+  downloadButton.classList.remove('has-explicit-visibility');
+  exportButton.classList.add('has-explicit-visibility');
+});

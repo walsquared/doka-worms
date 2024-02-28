@@ -34,29 +34,30 @@
       <div class="canvas-wrapper">
         <canvas id="main-canvas" width="960" height="540"></canvas>
       </div>
+
       <button id="start-button" class="toolbox-button">Make your own</button>
       <div id="toolbox" class="hidden">
         <div class="toolbox-section">
-          <button id="playback-toggle" class="toolbox-icon-button">
+          <button id="playback-toggle" class="toolbox-item">
             <img src="./icons/pause.svg" />
           </button>
         </div>
         <div class="toolbox-section disabled-during-playback">
           <button
             id="pencil-button"
-            class="toolbox-icon-button disabled-during-playback"
+            class="toolbox-item disabled-during-playback"
           >
             <img src="./icons/pencil.svg" />
           </button>
           <button
             id="wand-button"
-            class="toolbox-icon-button disabled-during-playback"
+            class="toolbox-item disabled-during-playback"
           >
             <img src="./icons/wand.svg" />
           </button>
           <button
             id="line-button"
-            class="toolbox-icon-button disabled-during-playback"
+            class="toolbox-item disabled-during-playback"
           >
             <img src="./icons/line.svg" />
           </button>
@@ -64,29 +65,49 @@
         <div class="toolbox-section disabled-during-playback">
           <button
             id="undo-button"
-            class="toolbox-icon-button disabled-during-playback"
+            class="toolbox-item disabled-during-playback"
             disabled="true"
           >
             <img src="./icons/undo.svg" />
           </button>
           <button
             id="redo-button"
-            class="toolbox-icon-button disabled-during-playback"
+            class="toolbox-item disabled-during-playback"
             disabled="true"
           >
             <img src="./icons/redo.svg" />
           </button>
         </div>
 
-        <!-- export -->
-
         <div class="toolbox-section">
           <button
             id="clear-canvas"
-            class="toolbox-icon-button disabled-during-playback destructive"
+            class="toolbox-item disabled-during-playback destructive"
           >
             <img src="./icons/trash.svg" />
           </button>
+        </div>
+
+        <div class="toolbox-section">
+          <button
+            id="export-button"
+            class="toolbox-item needs-explicit-visibility has-explicit-visibility"
+          >
+            <img src="./icons/check.svg" />
+          </button>
+          <div
+            id="loading-spinner"
+            class="toolbox-item spinning needs-explicit-visibility"
+          >
+            <img src="./icons/loader.svg" />
+          </div>
+          <a
+            id="download-button"
+            class="toolbox-item needs-explicit-visibility"
+            download="doka-worms.webm"
+          >
+            <img src="./icons/download.svg" />
+          </a>
         </div>
       </div>
     </div>
