@@ -8,6 +8,8 @@ import makeLine from './shapes/line';
 import { Point } from './types';
 import DokaJson from './doka-word.json';
 
+import noiseImg from './noise.svg';
+
 type PointWithId = Point & { id: string };
 type OrderedPoint = PointWithId & { index: number };
 
@@ -260,6 +262,36 @@ function drawTelegraphy(points: Point[]) {
   });
 }
 
+const img = new Image();
+img.src = noiseImg;
+let isLoaded = false;
+img.onload = () => {
+  isLoaded = true;
+};
+
+let compositor = document.createElement('canvas');
+let cctx = compositor.getContext('2d')!;
+compositor.width = canvas.width;
+compositor.height = canvas.height;
+
+function drawNoise() {
+  if (!isLoaded) return;
+
+  // Only use the image after it's loaded
+  const pattern = context.createPattern(img, 'repeat')!;
+
+  cctx.drawImage(canvas, 0, 0);
+  cctx.globalCompositeOperation = 'lighter';
+  cctx.fillStyle = pattern;
+  cctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  context.globalCompositeOperation = 'source-in';
+  context.drawImage(compositor, 0, 0);
+
+  context.globalCompositeOperation = 'source-over';
+  cctx.globalCompositeOperation = 'source-over';
+}
+
 function draw() {
   // Time since start of animation, multiplied by a factor to make it configurable
   const now = new Date();
@@ -275,6 +307,7 @@ function draw() {
     drawSquiggle(point.x, point.y, animationPosition)
   );
 
+  drawNoise();
   // ------------------------------
   // EDITOR
   // ------------------------------

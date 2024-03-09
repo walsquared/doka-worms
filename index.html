@@ -7,29 +7,6 @@
     <title>Doka Worm</title>
   </head>
   <body>
-    <!-- SVG filter mostly comes from this CSS Tricks article: -->
-    <!-- https://css-tricks.com/almanac/properties/f/filter/ -->
-    <svg
-      id="svg-filters"
-      aria-hidden="true"
-      version="1.1"
-      xmlns="http://www.w3.org/2000/svg"
-      xmlns:xlink="http://www.w3.org/1999/xlink"
-    >
-      <defs>
-        <filter id="grain">
-          <feTurbulence baseFrequency="0.60, 0.30" result="colorNoise" />
-          <feColorMatrix
-            in="colorNoise"
-            type="matrix"
-            values=".33 .33 .33 0 0 .33 .33 .33 0 0 .33 .33 .33 0 0 0 0 0 1 0"
-          />
-          <feComposite operator="in" in2="SourceGraphic" result="monoNoise" />
-          <feBlend in="SourceGraphic" in2="monoNoise" mode="multiply" />
-        </filter>
-      </defs>
-    </svg>
-
     <div class="viewport">
       <div class="canvas-wrapper">
         <canvas id="main-canvas" width="960" height="540"></canvas>
