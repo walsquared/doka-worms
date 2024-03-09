@@ -5,8 +5,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { Point } from './types';
 import DokaJson from './doka-word.json';
 
-import noiseImg from './noise.svg';
-
 type PointWithId = Point & { id: string };
 type OrderedPoint = PointWithId & { index: number };
 
@@ -210,12 +208,12 @@ function makeGradient(
  * A function that draws the gradient given to squiggles on the whole screen.
  * The gradient displayed is the one that would be used for a squiggle if that was drawn at the current cursor position.
  */
-function testGradient() {
-  context.rect(0, 0, canvas.width, canvas.height);
-  const gradient = makeGradient(mouseX, mouseY, 0);
-  context.fillStyle = gradient;
-  context.fill();
-}
+// function testGradient() {
+//   context.rect(0, 0, canvas.width, canvas.height);
+//   const gradient = makeGradient(mouseX, mouseY, 0);
+//   context.fillStyle = gradient;
+//   context.fill();
+// }
 
 function drawSquiggle(
   startX: number,
@@ -260,7 +258,11 @@ function drawTelegraphy(points: Point[]) {
 }
 
 const img = new Image();
-img.src = noiseImg;
+
+// A neat new way to import images with proper paths using native ESM
+const noiseImgUrl = new URL('./noise.svg', import.meta.url).href;
+img.src = noiseImgUrl;
+
 let isLoaded = false;
 img.onload = () => {
   isLoaded = true;
@@ -786,7 +788,7 @@ const downloadButton = document.getElementById('download-button')!;
 function createVideoOfCanvas(time: number): Promise<string> {
   const recordedChunks: Blob[] = [];
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const stream = canvas.captureStream(30);
     const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
 
