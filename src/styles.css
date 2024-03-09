@@ -43,13 +43,8 @@ a {
   gap: 16px;
 }
 
-.canvas-wrapper {
+#main-canvas {
   border: 2px solid white;
-
-  & canvas {
-    display: flex;
-    filter: url('#grain');
-  }
 }
 
 #toolbox {

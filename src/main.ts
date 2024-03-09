@@ -2,9 +2,6 @@
 // In action: https://www.volkshotel.nl/en/doka
 import { v4 as uuidv4 } from 'uuid';
 
-import makeSquare from './shapes/square';
-import makeCircle from './shapes/circle';
-import makeLine from './shapes/line';
 import { Point } from './types';
 import DokaJson from './doka-word.json';
 
@@ -355,32 +352,6 @@ function draw() {
 
   window.requestAnimationFrame(draw);
 }
-
-const square = makeSquare({
-  dotSize: DOT_SIZE,
-  startingPoint: {
-    x: (canvas.width / 4) * 3,
-    y: canvas.height / 2,
-  },
-})(5);
-
-const line = makeLine({
-  dotSize: DOT_SIZE,
-  startingPoint: {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-  },
-})(5, 0);
-
-const circle = makeCircle({
-  dotSize: DOT_SIZE,
-  startingPoint: {
-    x: canvas.width / 4,
-    y: canvas.height / 2,
-  },
-})(60);
-
-// addPoints([...square, ...line, ...circle]);
 
 draw();
 
