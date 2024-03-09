@@ -377,9 +377,32 @@ startButton.addEventListener('click', () => {
 });
 
 const playbackButton = document.getElementById('playback-toggle')!;
+const pauseImgUrl = new URL('../icons/pause.svg', import.meta.url).href;
+const playImgUrl = new URL('../icons/play.svg', import.meta.url).href;
+
 const pencilButton = document.getElementById('pencil-button')!;
 const wandButton = document.getElementById('wand-button')!;
 const lineButton = document.getElementById('line-button')!;
+const toolImages: {
+  [key in Tool]: {
+    active: string;
+    inactive: string;
+  };
+} = {
+  pencil: {
+    active: new URL('../icons/pencil-active.svg', import.meta.url).href,
+    inactive: new URL('../icons/pencil.svg', import.meta.url).href,
+  },
+  wand: {
+    active: new URL('../icons/wand-active.svg', import.meta.url).href,
+    inactive: new URL('../icons/wand.svg', import.meta.url).href,
+  },
+  line: {
+    active: new URL('../icons/line-active.svg', import.meta.url).href,
+    inactive: new URL('../icons/line.svg', import.meta.url).href,
+  },
+};
+
 const undoButton = document.getElementById('undo-button')!;
 const redoButton = document.getElementById('redo-button')!;
 const clearCanvasButton = document.getElementById('clear-canvas')!;
@@ -394,7 +417,7 @@ function updateToolbox() {
       }
     );
 
-    (playbackButton.children[0] as HTMLImageElement).src = './icons/pause.svg';
+    (playbackButton.children[0] as HTMLImageElement).src = pauseImgUrl;
     playbackButton.classList.add('active');
   } else {
     Array.prototype.forEach.call(
@@ -404,7 +427,7 @@ function updateToolbox() {
       }
     );
 
-    (playbackButton.children[0] as HTMLImageElement).src = './icons/play.svg';
+    (playbackButton.children[0] as HTMLImageElement).src = playImgUrl;
     playbackButton.classList.remove('active');
   }
 
@@ -739,7 +762,7 @@ function changeTool(tool: Tool) {
   oldTool.classList.remove('active');
 
   const oldToolIcon = oldTool.children[0] as HTMLImageElement;
-  oldToolIcon.src = oldToolIcon.src.replace('-active.svg', '.svg');
+  oldToolIcon.src = toolImages[activeTool].inactive;
 
   activeTool = tool;
 
@@ -747,7 +770,7 @@ function changeTool(tool: Tool) {
   newTool.classList.add('active');
 
   const newToolIcon = newTool.children[0] as HTMLImageElement;
-  newToolIcon.src = newToolIcon.src.replace('.svg', '-active.svg');
+  newToolIcon.src = toolImages[activeTool].active;
 }
 
 // Make the default tool active
